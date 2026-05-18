@@ -1459,7 +1459,7 @@
         >
           <div class="plbl" style="margin: 0">N =</div>
           <button class="pnb" id="cr-nminus">&#8722;</button>
-          <div class="pnv" id="cr-nval">2</div>
+          <div class="pnv" id="cr-nval">1</div>
           <button class="pnb" id="cr-nplus">+</button>
         </div>
         <button class="pb" id="cr-again">RUN NEXT BLOCK</button>
@@ -1527,7 +1527,7 @@
     <div id="tt">
       <div id="tt-glyphs"></div>
       <div class="tl">GLYPHMIND</div>
-      <div class="ts">Spatial N-back · offline data export</div>
+      <div class="ts">Spatial N-back · offline data export · default mode 1-back</div>
       <div id="tt-tagline">
         First <b>N</b> paintings: watch only. Then <b>70</b> scored trials per block.<br />Enter <b>participant ID</b> and <b>session ID</b> before starting; export from Pause or block end.
       </div>
@@ -1541,7 +1541,7 @@
         <div class="plbl" style="margin: 0">N =</div>
         <div class="pnrow" style="margin: 0; justify-content: center">
           <button class="pnb" id="tt-nminus">&#8722;</button>
-          <div class="pnv" id="tt-nval">2</div>
+          <div class="pnv" id="tt-nval">1</div>
           <button class="pnb" id="tt-nplus">+</button>
         </div>
       </div>
@@ -3273,7 +3273,7 @@
 
       // N-back level chosen on title row → copied into G.N at session start (matches whichever .mode-btn has class "on").
       let selectedN = 1;
-      let customN = 2;
+      let customN = 1;
 
       function selectMode(n, btn) {
         document.querySelectorAll(".mode-btn").forEach((b) => b.classList.remove("on"));
@@ -3281,6 +3281,13 @@
         selectedN = n;
         $("custom-wrap").classList.toggle("show", n === -1);
         if (n === -1) selectedN = customN;
+      }
+
+      /** Title / main menu (#tt): 1-back highlighted, CUSTOM N spinner reset to 1, custom picker hidden until CUSTOM is chosen. */
+      function syncMainMenuNBackUI() {
+        customN = 1;
+        $("tt-nval").textContent = "1";
+        selectMode(1, $("mode-1"));
       }
 
       $("mode-1").addEventListener("click", function () {
@@ -3302,6 +3309,8 @@
         $("tt-nval").textContent = customN;
         if ($("mode-custom").classList.contains("on")) selectedN = customN;
       });
+
+      syncMainMenuNBackUI();
 
       // Pause menu (#pm): freezes timers skew compensation on resume so RT remains wall-clock fair.
       function pauseGame() {
@@ -3468,11 +3477,14 @@
         gunGroup.visible = false;
         TFB.className = "";
         exitPointerLockIfAny();
+        syncMainMenuNBackUI();
+        G.N = selectedN;
+        NLEVEL.textContent = `N-BACK: ${G.N}`;
       }
 
       // Results overlay (#cr): pick N for the upcoming RUN NEXT BLOCK without re-entering PID (mirrors title modes).
       let crNextN = 1,
-        crCustomN = 2;
+        crCustomN = 1;
       function crSelectMode(n, btn) {
         document.querySelectorAll(".cr-mode-btn").forEach((b) => b.classList.remove("on"));
         if (btn) btn.classList.add("on");
