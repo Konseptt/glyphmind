@@ -1,0 +1,5081 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <title>GLYPHMIND · spatial N-back</title>
+    <style>
+      @font-face {
+        font-family: "Cinzel";
+        src: url("fonts/Cinzel-Regular.woff2") format("woff2");
+        font-weight: 400;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "Cinzel";
+        src: url("fonts/Cinzel-SemiBold.woff2") format("woff2");
+        font-weight: 600;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "Cinzel Decorative";
+        src: url("fonts/CinzelDecorative-Bold.woff2") format("woff2");
+        font-weight: 700;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "Cinzel Decorative";
+        src: url("fonts/CinzelDecorative-Black.woff2") format("woff2");
+        font-weight: 900;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "Noto Sans Egyptian Hieroglyphs";
+        src: url("fonts/NotoSansEgyptianHieroglyphs-Regular.woff2") format("woff2");
+        font-weight: 400;
+        font-style: normal;
+        font-display: block;
+        unicode-range: U+13000-1342F;
+      }
+    </style>
+    <style>
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #000;
+        font-family: "Cinzel", serif;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      #c {
+        display: block;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+        outline: none;
+      }
+      #gun {
+        position: fixed;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        pointer-events: none;
+        z-index: 6;
+        display: none;
+      }
+      #gun canvas {
+        display: none;
+      }
+      #lockhint {
+        position: fixed;
+        bottom: 110px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: none;
+        z-index: 12;
+        pointer-events: all;
+        cursor: pointer;
+        text-align: center;
+      }
+      #lockhint.show {
+        display: block;
+      }
+      #lockhint p {
+        font-family: "Cinzel", serif;
+        font-size: clamp(9px, 1vw, 11px);
+        color: rgba(245, 194, 82, 0.58);
+        letter-spacing: 0.2em;
+        animation: blink 2s ease-in-out infinite;
+      }
+      #hud {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        user-select: none;
+        z-index: 5;
+      }
+      #xh {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 22px;
+        height: 22px;
+      }
+      #xh::before,
+      #xh::after {
+        content: "";
+        position: absolute;
+        background: rgba(245, 194, 82, 0.84);
+      }
+      #xh::before {
+        width: 100%;
+        height: 1.5px;
+        top: 50%;
+        margin-top: -0.75px;
+      }
+      #xh::after {
+        width: 1.5px;
+        height: 100%;
+        left: 50%;
+        margin-left: -0.75px;
+      }
+      #xring {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 28px;
+        height: 28px;
+        border: 1.5px solid rgba(245, 194, 82, 0.28);
+        border-radius: 50%;
+        transition: all 0.14s;
+      }
+      #xring.aim {
+        width: 44px;
+        height: 44px;
+        border-color: rgba(245, 194, 82, 0.72);
+      }
+      #nlevel {
+        position: absolute;
+        top: 18px;
+        left: 20px;
+        font-size: clamp(13px, 2vw, 22px);
+        color: rgba(245, 194, 82, 1);
+        letter-spacing: 0.18em;
+        text-shadow: 0 0 16px rgba(245, 142, 26, 0.9);
+      }
+      #bestlv {
+        position: absolute;
+        top: 48px;
+        left: 20px;
+        font-size: clamp(9px, 1.2vw, 13px);
+        color: rgba(175, 122, 42, 0.68);
+        letter-spacing: 0.13em;
+      }
+      #seqbox {
+        position: absolute;
+        top: 18px;
+        right: 20px;
+        text-align: right;
+        max-width: 280px;
+        font-size: clamp(9px, 1.1vw, 13px);
+        color: rgba(200, 150, 54, 0.9);
+        letter-spacing: 0.07em;
+        line-height: 1.9;
+      }
+      #prompt {
+        position: absolute;
+        bottom: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: clamp(9px, 1.3vw, 14px);
+        letter-spacing: 0.18em;
+        color: rgba(200, 148, 52, 0.9);
+        text-shadow: 0 0 12px rgba(245, 142, 26, 0.55);
+        text-align: center;
+        pointer-events: none;
+        white-space: nowrap;
+      }
+      #statsbar {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        text-align: right;
+        font-size: clamp(7px, 0.85vw, 10px);
+        letter-spacing: 0.12em;
+        color: rgba(138, 98, 30, 0.6);
+        pointer-events: none;
+        z-index: 5;
+        line-height: 1.9;
+        display: none;
+      }
+
+      /* Response bar */
+      #rbar {
+        position: fixed;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: none;
+        gap: 18px;
+        z-index: 8;
+        pointer-events: all;
+        align-items: center;
+      }
+      #rbar.show {
+        display: flex;
+      }
+      .rbtn {
+        background: rgba(12, 8, 2, 0.94);
+        border: 2px solid rgba(160, 108, 28, 0.58);
+        color: rgba(242, 180, 60, 0.88);
+        font-family: "Cinzel", serif;
+        font-size: clamp(10px, 1.3vw, 14px);
+        letter-spacing: 0.14em;
+        padding: 10px 28px;
+        cursor: pointer;
+        transition:
+          background 0.12s,
+          border-color 0.14s,
+          transform 0.1s;
+        touch-action: manipulation;
+        min-width: 130px;
+        text-align: center;
+      }
+      .rbtn:hover,
+      .rbtn:focus {
+        background: rgba(34, 22, 6, 0.98);
+        border-color: rgba(242, 180, 60, 0.82);
+        transform: translateY(-2px);
+        outline: 2px solid rgba(242, 180, 60, 0.48);
+      }
+      .rbtn-match {
+        border-color: rgba(46, 200, 80, 0.55);
+        color: rgba(80, 220, 100, 0.9);
+      }
+      .rbtn-match:hover {
+        border-color: rgba(46, 220, 90, 0.8);
+      }
+      .rbtn-nomatch {
+        border-color: rgba(200, 80, 40, 0.55);
+        color: rgba(220, 120, 60, 0.9);
+      }
+      .rbtn-nomatch:hover {
+        border-color: rgba(220, 100, 50, 0.8);
+      }
+      .rbtn .rk {
+        display: block;
+        font-size: 0.7em;
+        color: rgba(200, 150, 50, 0.5);
+        margin-top: 3px;
+        letter-spacing: 0.1em;
+      }
+
+      /* Trial feedback flash */
+      #tfb {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-family: "Cinzel Decorative", serif;
+        font-weight: 900;
+        font-size: clamp(20px, 5vw, 48px);
+        letter-spacing: 0.06em;
+        pointer-events: none;
+        z-index: 15;
+        opacity: 0;
+        transition: opacity 0.12s;
+      }
+      #tfb.ok {
+        opacity: 1;
+        color: rgba(46, 220, 90, 1);
+        text-shadow: 0 0 32px rgba(46, 220, 90, 0.7);
+      }
+      #tfb.no {
+        opacity: 1;
+        color: rgba(220, 46, 20, 1);
+        text-shadow: 0 0 32px rgba(220, 46, 20, 0.7);
+      }
+
+      /* Pause menu */
+      #pm {
+        position: fixed;
+        inset: 0;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        overflow-y: auto;
+        padding: 40px 16px;
+        z-index: 30;
+        background: rgba(4, 2, 1, 0.94);
+      }
+      #pm.show {
+        display: flex;
+      }
+      .pt {
+        font-family: "Cinzel Decorative", serif;
+        font-size: clamp(18px, 4.5vw, 50px);
+        color: rgba(245, 192, 82, 0.96);
+        letter-spacing: 0.14em;
+        text-shadow: 0 0 28px rgba(245, 142, 26, 0.7);
+        margin-bottom: 6px;
+      }
+      .ps {
+        font-size: clamp(8px, 1.1vw, 12px);
+        color: rgba(132, 92, 26, 0.6);
+        letter-spacing: 0.3em;
+        margin-bottom: 32px;
+      }
+      .pb {
+        background: transparent;
+        border: 1.5px solid rgba(160, 108, 28, 0.52);
+        color: rgba(210, 156, 46, 0.92);
+        font-family: "Cinzel", serif;
+        font-size: clamp(10px, 1.4vw, 14px);
+        letter-spacing: 0.18em;
+        padding: 11px 40px;
+        cursor: pointer;
+        width: 300px;
+        max-width: 88vw;
+        margin: 4px 0;
+        transition:
+          background 0.12s,
+          border-color 0.12s;
+        touch-action: manipulation;
+      }
+      .pb:hover,
+      .pb:focus {
+        background: rgba(34, 22, 6, 0.9);
+        border-color: rgba(242, 180, 60, 0.7);
+        outline: none;
+      }
+      .pdiv {
+        width: 300px;
+        max-width: 88vw;
+        height: 1px;
+        background: rgba(160, 108, 28, 0.24);
+        margin: 14px 0;
+      }
+      .plbl {
+        font-size: clamp(8px, 1vw, 11px);
+        color: rgba(132, 92, 26, 0.65);
+        letter-spacing: 0.18em;
+        margin-bottom: 9px;
+        text-align: center;
+      }
+      .pnrow {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+      .pnv {
+        font-size: clamp(15px, 2.8vw, 24px);
+        color: rgba(245, 192, 82, 1);
+        min-width: 36px;
+        text-align: center;
+      }
+      .pnb {
+        background: rgba(18, 12, 4, 0.9);
+        border: 1.5px solid rgba(160, 108, 28, 0.5);
+        color: rgba(210, 156, 46, 0.9);
+        font-family: "Cinzel", serif;
+        font-size: 17px;
+        width: 36px;
+        height: 36px;
+        cursor: pointer;
+        transition: background 0.1s;
+        touch-action: manipulation;
+      }
+      .pnb:hover {
+        background: rgba(42, 28, 8, 0.9);
+      }
+      .trow {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 300px;
+        max-width: 88vw;
+        margin: 5px 0;
+      }
+      .tlbl {
+        font-size: clamp(8px, 1vw, 11px);
+        color: rgba(178, 130, 44, 0.74);
+        letter-spacing: 0.14em;
+      }
+      .tog {
+        position: relative;
+        width: 38px;
+        height: 20px;
+        background: rgba(18, 12, 4, 0.9);
+        border: 1.5px solid rgba(160, 108, 28, 0.5);
+        border-radius: 10px;
+        cursor: pointer;
+        transition: background 0.2s;
+        touch-action: manipulation;
+      }
+      .tog.on {
+        background: rgba(120, 82, 18, 0.72);
+      }
+      .tog::after {
+        content: "";
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        top: 2px;
+        left: 2px;
+        border-radius: 50%;
+        background: rgba(160, 108, 28, 0.62);
+        transition: transform 0.2s;
+      }
+      .tog.on::after {
+        transform: translateX(18px);
+        background: rgba(242, 180, 60, 0.92);
+      }
+      .pidinput {
+        background: rgba(12, 8, 2, 0.92);
+        border: 1.5px solid rgba(160, 108, 28, 0.5);
+        color: rgba(245, 192, 82, 0.9);
+        font-family: "Cinzel", serif;
+        font-size: clamp(10px, 1.3vw, 13px);
+        letter-spacing: 0.13em;
+        padding: 9px 14px;
+        width: 300px;
+        max-width: 88vw;
+        outline: none;
+        margin-bottom: 4px;
+      }
+      #fade {
+        position: fixed;
+        inset: 0;
+        background: #000;
+        opacity: 1;
+        z-index: 10;
+        pointer-events: none;
+        transition: opacity 0.62s;
+      }
+      #rfl {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 15;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.15s;
+      }
+      #rfl.show {
+        opacity: 1;
+      }
+      #rfl span {
+        font-family: "Cinzel Decorative", serif;
+        font-weight: 900;
+        font-size: clamp(26px, 7vw, 76px);
+        letter-spacing: 0.06em;
+        text-shadow: 0 0 58px currentColor;
+      }
+      #rfl.ok span {
+        color: rgba(46, 220, 90, 1);
+      }
+      #rfl.no span {
+        color: rgba(220, 46, 20, 1);
+      }
+
+      /* Tutorial */
+      #tut {
+        position: fixed;
+        inset: 0;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 25;
+        background: rgba(4, 2, 1, 0.97);
+        overflow-y: auto;
+        padding: 20px 0;
+      }
+      #tut.show {
+        display: flex;
+      }
+      #tut-inner {
+        display: flex;
+        align-items: flex-start;
+        gap: clamp(14px, 3vw, 46px);
+        max-width: 840px;
+        width: 92vw;
+        padding: 0 16px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      #tut-npc {
+        flex-shrink: 0;
+      }
+      #tut-npc canvas {
+        display: block;
+        max-width: 100%;
+      }
+      #tut-bubble {
+        flex: 1;
+        min-width: 280px;
+        min-height: 220px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .tut-who {
+        font-size: clamp(8px, 1vw, 11px);
+        letter-spacing: 0.26em;
+        color: rgba(160, 108, 28, 0.68);
+        margin-bottom: 8px;
+      }
+      .tut-txt {
+        font-size: clamp(11px, 1.5vw, 16px);
+        line-height: 1.85;
+        color: rgba(218, 170, 58, 0.9);
+        letter-spacing: 0.04em;
+        border-left: 2px solid rgba(160, 108, 28, 0.36);
+        padding-left: 18px;
+        flex: 1;
+      }
+      .tut-txt b {
+        color: rgba(245, 192, 82, 1);
+      }
+      .tut-nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 20px;
+        gap: 10px;
+      }
+      .tut-dots {
+        display: flex;
+        gap: 7px;
+        align-items: center;
+      }
+      .tut-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: rgba(160, 108, 28, 0.32);
+        transition: background 0.2s;
+      }
+      .tut-dot.on {
+        background: rgba(245, 192, 82, 0.9);
+      }
+      .tbtn {
+        background: transparent;
+        border: 1.5px solid rgba(160, 108, 28, 0.52);
+        color: rgba(210, 156, 46, 0.9);
+        font-family: "Cinzel", serif;
+        font-size: clamp(9px, 1.2vw, 12px);
+        letter-spacing: 0.17em;
+        padding: 9px 22px;
+        cursor: pointer;
+        transition:
+          background 0.12s,
+          border-color 0.12s;
+        white-space: nowrap;
+        touch-action: manipulation;
+      }
+      .tbtn:hover,
+      .tbtn:focus {
+        background: rgba(34, 22, 6, 0.9);
+        border-color: rgba(242, 180, 60, 0.7);
+        outline: none;
+      }
+      .tbtn:disabled {
+        opacity: 0.3;
+        cursor: default;
+        pointer-events: none;
+      }
+
+      /* Accessibility submenu */
+      #acc-sub {
+        position: fixed;
+        inset: 0;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        overflow-y: auto;
+        padding: 40px 16px;
+        z-index: 32;
+        background: rgba(4, 2, 1, 0.96);
+      }
+      #acc-sub.show {
+        display: flex;
+      }
+      body.acc-hc {
+        filter: contrast(1.4) saturate(1.2);
+      }
+      body.acc-largexh #xh {
+        width: 32px;
+        height: 32px;
+      }
+      body.acc-largexh #xh::before {
+        height: 2.5px;
+        margin-top: -1.25px;
+      }
+      body.acc-largexh #xh::after {
+        width: 2.5px;
+        margin-left: -1.25px;
+      }
+      body.acc-largexh #xring {
+        width: 42px;
+        height: 42px;
+        border-width: 2px;
+      }
+      body.acc-largexh #xring.aim {
+        width: 58px;
+        height: 58px;
+      }
+
+      /* Corridor results */
+      #cr {
+        position: fixed;
+        inset: 0;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 28;
+        background: rgba(4, 2, 1, 0.94);
+        padding: 24px;
+        text-align: center;
+        overflow-y: auto;
+      }
+      #cr.show {
+        display: flex;
+      }
+      #cr .cr-title {
+        font-family: "Cinzel Decorative", serif;
+        font-size: clamp(22px, 5vw, 52px);
+        color: rgba(245, 192, 82, 0.96);
+        letter-spacing: 0.12em;
+        margin-bottom: 4px;
+        text-shadow: 0 0 32px rgba(245, 142, 26, 0.7);
+      }
+      #cr .cr-sub {
+        font-size: clamp(9px, 1.2vw, 13px);
+        color: rgba(160, 120, 40, 0.6);
+        letter-spacing: 0.2em;
+        margin-bottom: 18px;
+      }
+      #cr .cr-body {
+        font-size: clamp(10px, 1.4vw, 14px);
+        color: rgba(200, 160, 72, 0.88);
+        letter-spacing: 0.08em;
+        line-height: 1.85;
+        max-width: 500px;
+        margin-bottom: 22px;
+      }
+      #cr .cr-stats {
+        display: flex;
+        gap: clamp(14px, 3vw, 32px);
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .cr-stat {
+        text-align: center;
+      }
+      .cr-stat-val {
+        font-family: "Cinzel Decorative", serif;
+        font-size: clamp(20px, 4vw, 40px);
+        color: rgba(245, 192, 82, 1);
+        text-shadow: 0 0 18px rgba(245, 142, 26, 0.5);
+      }
+      .cr-stat-lbl {
+        font-size: clamp(7px, 0.9vw, 10px);
+        color: rgba(160, 120, 40, 0.6);
+        letter-spacing: 0.18em;
+        margin-top: 2px;
+      }
+      #cr-particles {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+      }
+      .cr-particle {
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        opacity: 0;
+        animation: crFloat 2.5s ease-out forwards;
+      }
+      @keyframes crFloat {
+        0% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(-120px) scale(0);
+        }
+      }
+
+      /* Title screen */
+      #tt {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 20;
+        background: rgba(5, 3, 1, 0.96);
+        overflow-y: auto;
+        padding: 20px 0;
+      }
+      #tt.gone {
+        display: none;
+      }
+      #tt-glyphs {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+        opacity: 0.12;
+      }
+      .tt-glyph {
+        position: absolute;
+        font-family: "Noto Sans Egyptian Hieroglyphs", serif;
+        color: rgba(245, 192, 82, 0.3);
+        animation: ttDrift 18s linear infinite;
+      }
+      @keyframes ttDrift {
+        0% {
+          transform: translateY(110vh) rotate(0deg);
+        }
+        100% {
+          transform: translateY(-20vh) rotate(360deg);
+        }
+      }
+      .tl {
+        font-family: "Cinzel Decorative", serif;
+        font-weight: 900;
+        font-size: clamp(28px, 8vw, 90px);
+        color: rgba(245, 192, 82, 1);
+        letter-spacing: 0.1em;
+        text-shadow:
+          0 0 48px rgba(245, 142, 26, 0.9),
+          0 0 96px rgba(196, 90, 4, 0.38);
+        margin-bottom: 4px;
+        text-align: center;
+        position: relative;
+        z-index: 1;
+      }
+      .ts {
+        font-size: clamp(8px, 1.4vw, 15px);
+        color: rgba(180, 130, 46, 0.76);
+        letter-spacing: 0.3em;
+        margin-bottom: 8px;
+        text-align: center;
+        position: relative;
+        z-index: 1;
+      }
+      #tt-tagline {
+        font-size: clamp(7px, 1vw, 11px);
+        color: rgba(140, 100, 36, 0.5);
+        letter-spacing: 0.15em;
+        margin-bottom: 24px;
+        text-align: center;
+        line-height: 1.8;
+        position: relative;
+        z-index: 1;
+      }
+      #tt-best {
+        font-size: clamp(8px, 1.1vw, 12px);
+        color: rgba(180, 130, 46, 0.55);
+        letter-spacing: 0.2em;
+        margin-top: 18px;
+        position: relative;
+        z-index: 1;
+      }
+
+      /* Mode selector */
+      .mode-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        position: relative;
+        z-index: 1;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .mode-btn {
+        background: rgba(12, 8, 2, 0.92);
+        border: 2px solid rgba(160, 108, 28, 0.45);
+        color: rgba(180, 130, 46, 0.6);
+        font-family: "Cinzel", serif;
+        font-size: clamp(11px, 1.5vw, 16px);
+        letter-spacing: 0.16em;
+        padding: 12px 22px;
+        cursor: pointer;
+        transition: all 0.14s;
+        touch-action: manipulation;
+        min-width: 120px;
+        text-align: center;
+      }
+      .mode-btn:hover {
+        background: rgba(34, 22, 6, 0.98);
+        border-color: rgba(242, 180, 60, 0.65);
+      }
+      .mode-btn.on {
+        border-color: rgba(245, 192, 82, 0.9);
+        color: rgba(245, 192, 82, 1);
+        background: rgba(34, 22, 6, 0.9);
+        text-shadow: 0 0 12px rgba(245, 142, 26, 0.4);
+      }
+      .custom-n-wrap {
+        display: none;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 14px;
+        position: relative;
+        z-index: 1;
+      }
+      .custom-n-wrap.show {
+        display: flex;
+      }
+
+      .cond-btn,
+      .phase-btn {
+        border-color: rgba(160, 108, 28, 0.35);
+        color: rgba(180, 130, 46, 0.5);
+      }
+      .cond-btn.on,
+      .phase-btn.on {
+        border-color: rgba(245, 192, 82, 0.8);
+        color: rgba(245, 192, 82, 1);
+        background: rgba(34, 22, 6, 0.9);
+      }
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 0.28;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+
+      /* Touch Controls */
+      #t-joystick {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        width: clamp(90px, 20vw, 130px);
+        height: clamp(90px, 20vw, 130px);
+        background: rgba(12, 8, 2, 0.5);
+        border: 2px solid rgba(160, 108, 28, 0.4);
+        border-radius: 50%;
+        display: none;
+        z-index: 10;
+        touch-action: none;
+      }
+      #t-stick {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 40%;
+        height: 40%;
+        transform: translate(-50%, -50%);
+        background: rgba(245, 192, 82, 0.6);
+        border-radius: 50%;
+        pointer-events: none;
+      }
+      #t-pause {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        padding: 10px 14px;
+        background: rgba(12, 8, 2, 0.6);
+        border: 2px solid rgba(160, 108, 28, 0.5);
+        color: rgba(245, 192, 82, 0.9);
+        font-family: "Cinzel", serif;
+        font-size: clamp(10px, 3vw, 14px);
+        display: none;
+        z-index: 35;
+        cursor: pointer;
+        letter-spacing: 0.1em;
+        touch-action: manipulation;
+      }
+      body.is-touch #t-joystick {
+        display: block;
+      }
+      body.is-touch #t-pause {
+        display: block;
+      }
+      body.is-touch #lockhint p {
+        animation: none;
+        font-size: 11px;
+        opacity: 0.8;
+      }
+
+      /* cutscene */
+      #cutscene {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        background: #000;
+        display: none;
+        overflow: hidden;
+        transition: background 2s ease;
+      }
+      #cutscene.show {
+        display: block;
+      }
+      #cutscene.phase-gold {
+        background: #0a0804;
+      }
+      #cs-scanlines {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 10;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.12) 2px,
+          rgba(0, 0, 0, 0.12) 4px
+        );
+        opacity: 0.4;
+      }
+      #cs-vignette {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 1;
+        background: radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, 0.85) 100%);
+      }
+      #cs-terminal {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        padding: 5vh 6vw;
+        z-index: 3;
+        font-family: "Courier New", monospace;
+        overflow: hidden;
+      }
+      .term-line {
+        font-size: clamp(9px, 1.2vw, 14px);
+        color: rgba(60, 220, 80, 0.8);
+        letter-spacing: 0.06em;
+        line-height: 1.7;
+        opacity: 0;
+        transform: translateX(-8px);
+        transition:
+          opacity 0.3s,
+          transform 0.3s;
+        white-space: pre-wrap;
+      }
+      .term-line.on {
+        opacity: 1;
+        transform: translateX(0);
+      }
+      .term-line.err {
+        color: rgba(255, 60, 40, 0.9);
+      }
+      .term-line.warn {
+        color: rgba(255, 200, 40, 0.85);
+      }
+      .term-line.sys {
+        color: rgba(60, 220, 80, 0.4);
+      }
+      .term-cursor {
+        display: inline-block;
+        width: 8px;
+        height: 1.1em;
+        background: rgba(60, 220, 80, 0.7);
+        animation: termBlink 0.6s step-end infinite;
+        vertical-align: text-bottom;
+        margin-left: 2px;
+      }
+      @keyframes termBlink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0;
+        }
+      }
+
+      #cs-khenu {
+        position: absolute;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 5;
+        opacity: 0;
+        transition: opacity 1.2s ease;
+      }
+      #cs-khenu.on {
+        display: flex;
+        opacity: 1;
+      }
+      #cs-khenu-inner {
+        display: flex;
+        align-items: flex-start;
+        gap: clamp(16px, 3vw, 40px);
+        max-width: 860px;
+        width: 92vw;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      #cs-portrait {
+        flex-shrink: 0;
+        position: relative;
+      }
+      #cs-portrait canvas {
+        display: block;
+        filter: drop-shadow(0 0 20px rgba(245, 180, 60, 0.3));
+      }
+      #cs-portrait-glow {
+        position: absolute;
+        inset: -20px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(245, 180, 60, 0.15) 0%, transparent 70%);
+        animation: portraitPulse 3s ease-in-out infinite;
+        pointer-events: none;
+      }
+      @keyframes portraitPulse {
+        0%,
+        100% {
+          opacity: 0.5;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.05);
+        }
+      }
+      #cs-dialogue {
+        flex: 1;
+        min-width: 260px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      #cs-name {
+        font-family: "Cinzel Decorative", serif;
+        font-size: clamp(10px, 1.4vw, 16px);
+        letter-spacing: 0.3em;
+        color: rgba(245, 192, 82, 0.6);
+        margin-bottom: 12px;
+      }
+      #cs-text {
+        font-family: "Cinzel", serif;
+        font-size: clamp(12px, 1.6vw, 18px);
+        color: rgba(218, 170, 58, 0.92);
+        letter-spacing: 0.04em;
+        line-height: 2;
+        border-left: 2px solid rgba(160, 108, 28, 0.4);
+        padding-left: 20px;
+        min-height: 120px;
+      }
+      #cs-text b {
+        color: rgba(245, 192, 82, 1);
+      }
+      #cs-text .highlight {
+        color: rgba(255, 160, 40, 1);
+        text-shadow: 0 0 12px rgba(255, 120, 20, 0.4);
+      }
+      #cs-continue {
+        font-family: "Cinzel", serif;
+        font-size: clamp(8px, 1vw, 11px);
+        letter-spacing: 0.2em;
+        color: rgba(160, 108, 28, 0.4);
+        margin-top: 16px;
+        animation: blink 2s ease-in-out infinite;
+      }
+
+      #cs-skip {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        font-family: "Cinzel", serif;
+        font-size: clamp(9px, 1.1vw, 12px);
+        letter-spacing: 0.2em;
+        color: rgba(120, 120, 120, 0.5);
+        cursor: pointer;
+        z-index: 55;
+        padding: 8px 16px;
+        border: 1px solid rgba(120, 120, 120, 0.2);
+        transition: all 0.2s;
+        touch-action: manipulation;
+      }
+      #cs-skip:hover {
+        color: rgba(200, 200, 200, 0.8);
+        border-color: rgba(200, 200, 200, 0.4);
+      }
+      #cs-progress {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        height: 2px;
+        background: linear-gradient(90deg, rgba(60, 220, 80, 0.4), rgba(245, 192, 82, 0.6));
+        z-index: 55;
+        transition: width 0.6s ease;
+      }
+
+      /* Khenu eye glow effect */
+      .cs-eye-glow {
+        position: absolute;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: rgba(245, 192, 82, 0.9);
+        box-shadow:
+          0 0 8px rgba(245, 192, 82, 0.6),
+          0 0 20px rgba(245, 142, 26, 0.3);
+        animation: eyePulse 2s ease-in-out infinite;
+      }
+      @keyframes eyePulse {
+        0%,
+        100% {
+          opacity: 0.6;
+          box-shadow: 0 0 8px rgba(245, 192, 82, 0.4);
+        }
+        50% {
+          opacity: 1;
+          box-shadow:
+            0 0 16px rgba(245, 192, 82, 0.8),
+            0 0 32px rgba(245, 142, 26, 0.4);
+        }
+      }
+
+      /* Glitch transition */
+      .cs-glitch-overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 8;
+        pointer-events: none;
+        opacity: 0;
+      }
+      .cs-glitch-overlay.on {
+        animation: csGlitchFull 0.8s ease forwards;
+      }
+      @keyframes csGlitchFull {
+        0% {
+          opacity: 0;
+        }
+        10% {
+          opacity: 1;
+          background: rgba(255, 60, 40, 0.15);
+          transform: translateX(-3px);
+        }
+        20% {
+          background: rgba(60, 220, 80, 0.1);
+          transform: translateX(2px) skewX(1deg);
+        }
+        30% {
+          background: rgba(245, 192, 82, 0.1);
+          transform: translateX(-1px);
+        }
+        50% {
+          background: rgba(0, 0, 0, 0.3);
+          transform: none;
+        }
+        70% {
+          background: rgba(245, 192, 82, 0.05);
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+
+      /* combo HUD */
+      #combo {
+        position: fixed;
+        top: 80px;
+        left: 20px;
+        font-family: "Cinzel Decorative", serif;
+        font-size: clamp(14px, 2.5vw, 28px);
+        color: rgba(245, 192, 82, 0);
+        letter-spacing: 0.1em;
+        pointer-events: none;
+        z-index: 5;
+        transition:
+          color 0.3s,
+          text-shadow 0.3s,
+          transform 0.2s;
+        transform-origin: left center;
+      }
+      #combo.hot {
+        color: rgba(245, 192, 82, 1);
+        text-shadow: 0 0 18px rgba(245, 142, 26, 0.6);
+      }
+      #combo.fire {
+        color: rgba(255, 160, 40, 1);
+        text-shadow:
+          0 0 24px rgba(255, 100, 20, 0.8),
+          0 0 48px rgba(255, 60, 10, 0.4);
+      }
+      #combo.blaze {
+        color: rgba(255, 100, 20, 1);
+        text-shadow:
+          0 0 32px rgba(255, 60, 10, 1),
+          0 0 64px rgba(255, 30, 0, 0.5);
+        animation: comboPulse 0.4s ease infinite;
+      }
+      @keyframes comboPulse {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.06);
+        }
+      }
+      #combo-label {
+        font-size: 0.45em;
+        letter-spacing: 0.25em;
+        display: block;
+        color: rgba(200, 150, 50, 0.5);
+      }
+
+      /* screen shake */
+      #c.shake-sm {
+        animation: shakeSm 0.25s ease;
+      }
+      #c.shake-lg {
+        animation: shakeLg 0.4s ease;
+      }
+      @keyframes shakeSm {
+        0%,
+        100% {
+          transform: translate(0);
+        }
+        20% {
+          transform: translate(-3px, 2px);
+        }
+        40% {
+          transform: translate(3px, -2px);
+        }
+        60% {
+          transform: translate(-2px, 1px);
+        }
+        80% {
+          transform: translate(2px, -1px);
+        }
+      }
+      @keyframes shakeLg {
+        0%,
+        100% {
+          transform: translate(0);
+        }
+        10% {
+          transform: translate(-6px, 4px);
+        }
+        20% {
+          transform: translate(6px, -3px);
+        }
+        30% {
+          transform: translate(-5px, 5px);
+        }
+        40% {
+          transform: translate(4px, -4px);
+        }
+        50% {
+          transform: translate(-3px, 3px);
+        }
+        60% {
+          transform: translate(3px, -2px);
+        }
+        70% {
+          transform: translate(-2px, 2px);
+        }
+        80% {
+          transform: translate(2px, -1px);
+        }
+        90% {
+          transform: translate(-1px, 1px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="c" tabindex="0" aria-label="Game view"></canvas>
+    <div id="gun"><canvas id="gc"></canvas></div>
+    <div id="lockhint"><p>CLICK TO LOCK MOUSE</p></div>
+    <div id="statsbar"></div>
+    <div id="hud">
+      <div id="xh"></div>
+      <div id="xring"></div>
+      <div id="nlevel">N-BACK: 1</div>
+      <div id="bestlv"></div>
+      <div id="seqbox"></div>
+      <div id="prompt"></div>
+    </div>
+
+    <!-- match / no-match bar -->
+    <div id="rbar">
+      <button class="rbtn rbtn-match" id="rb-match">MATCH<span class="rk">F / CLICK</span></button>
+      <button class="rbtn rbtn-nomatch" id="rb-nomatch">
+        NO MATCH<span class="rk">J / RIGHT-CLICK</span>
+      </button>
+    </div>
+
+    <!-- trial flash -->
+    <div id="tfb"></div>
+
+    <div id="pm">
+      <div class="pt">PAUSED</div>
+      <div class="ps">ESC TO RESUME</div>
+      <button class="pb" id="pm-resume">RESUME</button>
+      <div class="pdiv"></div>
+      <button class="pb" id="pm-tutorial">INSTRUCTIONS</button>
+      <button class="pb" id="pm-access">ACCESSIBILITY</button>
+      <button class="pb" id="pm-export">EXPORT DATA</button>
+      <button
+        class="pb"
+        id="pm-savenext"
+        style="
+          background: rgba(20, 40, 12, 0.96);
+          border-color: rgba(120, 220, 90, 0.55);
+          color: rgba(150, 240, 120, 0.92);
+        "
+      >
+        SAVE &amp; NEXT PARTICIPANT
+      </button>
+      <div class="pdiv"></div>
+      <button class="pb" id="pm-restart">RESTART BLOCK</button>
+      <button class="pb" id="pm-title">BACK TO TITLE</button>
+      <div class="pdiv"></div>
+      <div class="plbl">PARTICIPANT ID</div>
+      <input
+        id="pid"
+        class="pidinput"
+        type="text"
+        maxlength="32"
+        placeholder="e.g. P001"
+        autocomplete="off"
+      />
+    </div>
+
+    <div id="acc-sub">
+      <div class="pt">ACCESSIBILITY</div>
+      <div class="ps">DISPLAY AND INPUT</div>
+      <div class="trow">
+        <span class="tlbl">HIGH CONTRAST</span>
+        <div class="tog" id="t-hc" role="switch" aria-checked="false" tabindex="0"></div>
+      </div>
+      <div class="trow">
+        <span class="tlbl">SHOW GLYPH LABELS ON HUD</span>
+        <div class="tog" id="t-labels" role="switch" aria-checked="false" tabindex="0"></div>
+      </div>
+      <div class="trow">
+        <span class="tlbl">LARGER CROSSHAIR</span>
+        <div class="tog" id="t-largexh" role="switch" aria-checked="false" tabindex="0"></div>
+      </div>
+      <div class="trow">
+        <span class="tlbl">MOUSE SENSITIVITY (LOW)</span>
+        <div class="tog" id="t-lowsens" role="switch" aria-checked="false" tabindex="0"></div>
+      </div>
+      <div class="trow">
+        <span class="tlbl">MUTE SOUNDS</span>
+        <div class="tog" id="t-mute" role="switch" aria-checked="false" tabindex="0"></div>
+      </div>
+      <div class="trow">
+        <span class="tlbl">LONGER GLOW (5s)</span>
+        <div class="tog" id="t-longglow" role="switch" aria-checked="false" tabindex="0"></div>
+      </div>
+      <div class="pdiv"></div>
+      <button class="pb" id="acc-back">BACK</button>
+    </div>
+
+    <div id="cr">
+      <div id="cr-particles"></div>
+      <div class="cr-title" id="cr-title">BLOCK COMPLETE</div>
+      <div class="cr-sub" id="cr-sub"></div>
+      <div class="cr-stats" id="cr-stats"></div>
+      <div class="cr-body" id="cr-body"></div>
+      <button class="pb" id="cr-export">EXPORT DATA</button>
+      <button
+        class="pb"
+        id="cr-savenext"
+        style="
+          margin-top: 8px;
+          background: rgba(20, 40, 12, 0.96);
+          border-color: rgba(120, 220, 90, 0.55);
+          color: rgba(150, 240, 120, 0.92);
+        "
+      >
+        SAVE &amp; NEXT PARTICIPANT
+      </button>
+      <div
+        style="margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(120, 80, 30, 0.3)"
+      >
+        <div class="plbl" style="margin-bottom: 6px">NEXT BLOCK (same IDs)</div>
+        <div style="display: flex; gap: 6px; justify-content: center; margin-bottom: 8px">
+          <button
+            class="pb cr-mode-btn"
+            id="cr-mode-1"
+            style="flex: 1; padding: 8px 4px; font-size: clamp(8px, 1vw, 11px)"
+          >
+            1-BACK
+          </button>
+          <button
+            class="pb cr-mode-btn"
+            id="cr-mode-3"
+            style="flex: 1; padding: 8px 4px; font-size: clamp(8px, 1vw, 11px)"
+          >
+            3-BACK
+          </button>
+          <button
+            class="pb cr-mode-btn"
+            id="cr-mode-custom"
+            style="flex: 1; padding: 8px 4px; font-size: clamp(8px, 1vw, 11px)"
+          >
+            CUSTOM
+          </button>
+        </div>
+        <div
+          id="cr-custom-wrap"
+          style="
+            display: none;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 8px;
+          "
+        >
+          <div class="plbl" style="margin: 0">N =</div>
+          <button class="pnb" id="cr-nminus">&#8722;</button>
+          <div class="pnv" id="cr-nval">2</div>
+          <button class="pnb" id="cr-nplus">+</button>
+        </div>
+        <button class="pb" id="cr-again">RUN NEXT BLOCK</button>
+      </div>
+      <button class="pb" id="cr-menu" style="margin-top: 8px">TITLE</button>
+    </div>
+
+    <div id="rfl"><span id="rfl-txt"></span></div>
+
+    <div id="tut">
+      <div id="tut-inner">
+        <div id="tut-npc"><canvas id="npc-cv" width="160" height="260"></canvas></div>
+        <div id="tut-bubble">
+          <div class="tut-who">KHENU</div>
+          <div class="tut-txt" id="tut-txt"></div>
+          <div class="tut-nav">
+            <button class="tbtn" id="tut-prev">&#8592; BACK</button>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 8px;
+                justify-content: center;
+              "
+            >
+              <div class="tut-dots" id="tut-dots"></div>
+              <button class="tbtn" id="tut-skip" type="button">SKIP</button>
+            </div>
+            <button class="tbtn" id="tut-next">NEXT &#8594;</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="fade"></div>
+
+    <!-- intro -->
+    <div id="cutscene">
+      <div id="cs-vignette"></div>
+      <div id="cs-scanlines"></div>
+      <div class="cs-glitch-overlay" id="cs-glitch"></div>
+      <div id="cs-terminal"></div>
+      <div id="cs-khenu">
+        <div id="cs-khenu-inner">
+          <div id="cs-portrait">
+            <div id="cs-portrait-glow"></div>
+            <canvas id="cs-npc" width="180" height="280"></canvas>
+          </div>
+          <div id="cs-dialogue">
+            <div id="cs-name">KHENU</div>
+            <div id="cs-text"></div>
+            <div id="cs-continue">Click or key to continue</div>
+          </div>
+        </div>
+      </div>
+      <div id="cs-skip" onclick="skipCutscene()">SKIP [ESC]</div>
+      <div id="cs-progress" style="width: 0%"></div>
+    </div>
+
+    <!-- streak -->
+    <div id="combo"><span id="combo-label">STREAK</span><span id="combo-val"></span></div>
+
+    <!-- title -->
+    <div id="tt">
+      <div id="tt-glyphs"></div>
+      <div class="tl">GLYPHMIND</div>
+      <div class="ts">Spatial N-back · offline data export</div>
+      <div id="tt-tagline">
+        First <b>N</b> paintings: watch only. Then <b>70</b> scored trials per block.<br />Enter <b>participant ID</b> and <b>session ID</b> before starting; export from Pause or block end.
+      </div>
+
+      <div class="mode-row">
+        <button class="mode-btn" id="mode-1">1-BACK</button>
+        <button class="mode-btn on" id="mode-3">3-BACK</button>
+        <button class="mode-btn" id="mode-custom">CUSTOM</button>
+      </div>
+      <div class="custom-n-wrap" id="custom-wrap">
+        <div class="plbl" style="margin: 0">N =</div>
+        <div class="pnrow" style="margin: 0; justify-content: center">
+          <button class="pnb" id="tt-nminus">&#8722;</button>
+          <div class="pnv" id="tt-nval">2</div>
+          <button class="pnb" id="tt-nplus">+</button>
+        </div>
+      </div>
+
+      <div
+        style="position: relative; z-index: 1; width: 300px; max-width: 88vw; margin-bottom: 14px"
+      >
+        <div class="plbl">PARTICIPANT ID</div>
+        <input
+          id="tt-pid"
+          class="pidinput"
+          type="text"
+          maxlength="32"
+          placeholder="e.g. P001"
+          autocomplete="off"
+          aria-required="true"
+        />
+        <div class="plbl" style="margin-top: 12px">SESSION ID</div>
+        <input
+          id="tt-sid"
+          class="pidinput"
+          type="text"
+          maxlength="32"
+          placeholder="e.g. S01"
+          autocomplete="off"
+        />
+        <div class="plbl" style="margin-top: 12px">CONDITION</div>
+        <div style="display: flex; gap: 6px; margin-bottom: 8px">
+          <button
+            class="pb cond-btn on"
+            id="cond-tdcs"
+            style="flex: 1; padding: 8px 4px; font-size: clamp(8px, 1vw, 11px)"
+          >
+            tDCS
+          </button>
+          <button
+            class="pb cond-btn"
+            id="cond-sham"
+            style="flex: 1; padding: 8px 4px; font-size: clamp(8px, 1vw, 11px)"
+          >
+            SHAM
+          </button>
+          <button
+            class="pb cond-btn"
+            id="cond-ctrl"
+            style="flex: 1; padding: 8px 4px; font-size: clamp(8px, 1vw, 11px)"
+          >
+            CONTROL
+          </button>
+        </div>
+        <div class="plbl" style="margin-top: 8px">PHASE</div>
+        <div style="display: flex; gap: 6px; margin-bottom: 8px">
+          <button
+            class="pb phase-btn on"
+            id="phase-pre"
+            style="flex: 1; padding: 8px 4px; font-size: clamp(8px, 1vw, 11px)"
+          >
+            PRE
+          </button>
+          <button
+            class="pb phase-btn"
+            id="phase-during"
+            style="flex: 1; padding: 8px 4px; font-size: clamp(8px, 1vw, 11px)"
+          >
+            DURING
+          </button>
+          <button
+            class="pb phase-btn"
+            id="phase-post"
+            style="flex: 1; padding: 8px 4px; font-size: clamp(8px, 1vw, 11px)"
+          >
+            POST
+          </button>
+        </div>
+      </div>
+
+      <div style="position: relative; z-index: 1; width: 300px; max-width: 88vw">
+        <button
+          id="enter-btn"
+          disabled
+          style="
+            background: rgba(12, 8, 2, 0.92);
+            border: 2px solid rgba(245, 192, 82, 0.68);
+            color: rgba(245, 192, 82, 1);
+            font-family: &quot;Cinzel&quot;, serif;
+            font-size: clamp(11px, 1.6vw, 17px);
+            letter-spacing: 0.22em;
+            padding: 14px 20px;
+            width: 100%;
+            cursor: pointer;
+            text-shadow: 0 0 13px rgba(245, 142, 26, 0.55);
+            transition:
+              background 0.14s,
+              border-color 0.14s,
+              box-shadow 0.14s;
+            touch-action: manipulation;
+          "
+        >
+          LOADING GLYPHS...
+        </button>
+      </div>
+      <div id="tt-best"></div>
+    </div>
+
+    <div id="t-joystick"><div id="t-stick"></div></div>
+    <div id="t-pause">| | PAUSE</div>
+
+    <script src="lib/xlsx.full.min.js"></script>
+    <script src="lib/three.min.js"></script>
+    <script>
+      "use strict";
+      // glyphmind, three r128, N warm-up paintings + 70 scored trials
+
+      const TOTAL_TRIALS = 70;
+      const MATCH_COUNT = 30; // 30 match / 40 non-match
+
+      const $ = (id) => document.getElementById(id);
+      const C3D = $("c"),
+        GCV = $("gc"),
+        GCX = GCV.getContext("2d"),
+        GUN = $("gun");
+      const LOCKHINT = $("lockhint"),
+        HUD = $("hud"),
+        NLEVEL = $("nlevel"),
+        BESTLV = $("bestlv");
+      const SEQBOX = $("seqbox"),
+        PROMPT = $("prompt"),
+        STATSBAR = $("statsbar");
+      const RBAR = $("rbar"),
+        TFB = $("tfb");
+      const PMENU = $("pm"),
+        FADE = $("fade"),
+        RFL = $("rfl"),
+        RFL_TXT = $("rfl-txt");
+      const TUT = $("tut"),
+        TUT_TXT = $("tut-txt"),
+        TUT_DOTS = $("tut-dots");
+      const TUT_PREV = $("tut-prev"),
+        TUT_NEXT = $("tut-next"),
+        TUT_SKIP = $("tut-skip");
+      const XRING = $("xring"),
+        TITLE = $("tt"),
+        ACCSUB = $("acc-sub");
+      const CR = $("cr"),
+        CRBODY = $("cr-body");
+
+      // renderer
+      const renderer = new THREE.WebGLRenderer({
+        canvas: C3D,
+        antialias: false,
+        powerPreference: "high-performance",
+        stencil: false,
+      });
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+      renderer.shadowMap.enabled = false;
+      renderer.toneMapping = THREE.NoToneMapping;
+      const scene = new THREE.Scene();
+      scene.fog = new THREE.Fog(0x140e0a, 22, 88);
+      const cam = new THREE.PerspectiveCamera(72, 1, 0.1, 100);
+      cam.position.set(0, 1.78, 3.5);
+      function onResize() {
+        renderer.setSize(innerWidth, innerHeight);
+        cam.aspect = innerWidth / innerHeight;
+        cam.updateProjectionMatrix();
+      }
+      onResize();
+      window.addEventListener("resize", onResize);
+
+      // lights
+      const AMBIENT = new THREE.AmbientLight(0x3a2418, 1.65);
+      scene.add(AMBIENT);
+      const hemi = new THREE.HemisphereLight(0x4a3020, 0x120c08, 0.72);
+      scene.add(hemi);
+      const TORCH_LIGHTS = Array.from({ length: 12 }, () => {
+        const pl = new THREE.PointLight(0xff9a38, 3.95, 19);
+        pl.visible = false;
+        scene.add(pl);
+        return pl;
+      });
+
+      // audio ctx + sfx
+      let audioCtx = null;
+      function initAudio() {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          if (audioCtx.state === "suspended") audioCtx.resume();
+        }
+      }
+      function beep(freq, type, dur, vol = 0.16, delay = 0) {
+        if (!audioCtx) return;
+        const o = audioCtx.createOscillator(),
+          g = audioCtx.createGain();
+        o.type = type;
+        o.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
+        g.gain.setValueAtTime(vol, audioCtx.currentTime + delay);
+        g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + delay + dur);
+        o.connect(g);
+        g.connect(audioCtx.destination);
+        o.start(audioCtx.currentTime + delay);
+        o.stop(audioCtx.currentTime + delay + dur);
+      }
+      const SFX = {
+        panel: () => {
+          beep(320, "sine", 0.2, 0.13);
+          beep(480, "sine", 0.16, 0.07, 0.04);
+        },
+        enter: () => {
+          [220, 330, 440, 660].forEach((f, i) => beep(f, "sine", 0.5, 0.11, i * 0.06));
+        },
+        shoot: () => {
+          beep(80, "sawtooth", 0.12, 0.32);
+          beep(120, "square", 0.07, 0.18, 0.03);
+        },
+        correct: () => {
+          [523, 659, 784].forEach((f, i) => beep(f, "sine", 0.3, 0.12, i * 0.06));
+        },
+        wrong: () => {
+          beep(180, "sawtooth", 0.25, 0.22);
+          beep(160, "sawtooth", 0.18, 0.2, 0.05);
+        },
+        pass: () => {
+          beep(260, "sine", 0.12, 0.08);
+        },
+      };
+
+      // corridor textures (canvas)
+      function texFinish(tex) {
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        tex.generateMipmaps = true;
+        tex.minFilter = THREE.LinearMipmapLinearFilter;
+        const maxA =
+          renderer.capabilities && renderer.capabilities.getMaxAnisotropy
+            ? renderer.capabilities.getMaxAnisotropy()
+            : 1;
+        tex.anisotropy = Math.min(8, maxA);
+        return tex;
+      }
+      function makeBumpNoise(S = 256, contrast = 38) {
+        const cv = document.createElement("canvas");
+        cv.width = cv.height = S;
+        const ctx = cv.getContext("2d");
+        const id = ctx.createImageData(S, S),
+          d = id.data;
+        for (let i = 0; i < d.length; i += 4) {
+          const v = 128 + (Math.random() - 0.5) * contrast;
+          const c = Math.max(24, Math.min(232, v));
+          d[i] = d[i + 1] = d[i + 2] = c;
+          d[i + 3] = 255;
+        }
+        ctx.putImageData(id, 0, 0);
+        return texFinish(new THREE.CanvasTexture(cv));
+      }
+
+      function makeWallStone() {
+        const S = 512,
+          cv = document.createElement("canvas");
+        cv.width = cv.height = S;
+        const ctx = cv.getContext("2d");
+        const g = ctx.createLinearGradient(0, 0, 0, S);
+        g.addColorStop(0, "rgb(78,58,38)");
+        g.addColorStop(0.45, "rgb(58,42,26)");
+        g.addColorStop(1, "rgb(44,32,18)");
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, S, S);
+        const id = ctx.getImageData(0, 0, S, S),
+          d = id.data;
+        for (let i = 0; i < d.length; i += 4) {
+          const n = (Math.random() - 0.5) * 22;
+          d[i] = Math.max(0, Math.min(255, d[i] + n));
+          d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + n * 0.72));
+          d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + n * 0.48));
+        }
+        ctx.putImageData(id, 0, 0);
+        const rows = 5,
+          ts = S / rows;
+        ctx.strokeStyle = "rgba(12,8,4,.55)";
+        ctx.lineWidth = 4;
+        for (let y = 0; y <= rows; y++) {
+          ctx.beginPath();
+          ctx.moveTo(0, y * ts);
+          ctx.lineTo(S, y * ts);
+          ctx.stroke();
+        }
+        for (let row = 0; row < rows; row++) {
+          const off = (row % 2) * ts * 0.62;
+          for (let x = off; x < S + ts; x += ts * 1.48) {
+            ctx.beginPath();
+            ctx.moveTo(x, row * ts);
+            ctx.lineTo(x, (row + 1) * ts);
+            ctx.stroke();
+          }
+        }
+        return texFinish(new THREE.CanvasTexture(cv));
+      }
+      function makeFloorStone() {
+        const S = 512,
+          cv = document.createElement("canvas");
+        cv.width = cv.height = S;
+        const ctx = cv.getContext("2d");
+        ctx.fillStyle = "rgb(42,32,22)";
+        ctx.fillRect(0, 0, S, S);
+        const tiles = 7,
+          ts = S / tiles;
+        for (let ty = 0; ty < tiles; ty++)
+          for (let tx = 0; tx < tiles; tx++) {
+            const ox = tx * ts,
+              oy = ty * ts,
+              br = 8 + ((tx * 17 + ty * 23) % 28);
+            const gg = ctx.createLinearGradient(ox, oy, ox + ts, oy + ts);
+            gg.addColorStop(0, `rgb(${br + 28},${br + 18},${br + 6})`);
+            gg.addColorStop(1, `rgb(${br},${br - 6},${br - 14})`);
+            ctx.fillStyle = gg;
+            ctx.fillRect(ox + 5, oy + 5, ts - 10, ts - 10);
+          }
+        ctx.strokeStyle = "rgba(6,4,2,.65)";
+        ctx.lineWidth = 3;
+        for (let i = 0; i <= tiles; i++) {
+          ctx.beginPath();
+          ctx.moveTo(i * ts, 0);
+          ctx.lineTo(i * ts, S);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(0, i * ts);
+          ctx.lineTo(S, i * ts);
+          ctx.stroke();
+        }
+        return texFinish(new THREE.CanvasTexture(cv));
+      }
+      function makeCeilingStone() {
+        const S = 512,
+          cv = document.createElement("canvas");
+        cv.width = cv.height = S;
+        const ctx = cv.getContext("2d");
+        ctx.fillStyle = "rgb(36,26,16)";
+        ctx.fillRect(0, 0, S, S);
+        const id = ctx.getImageData(0, 0, S, S),
+          d = id.data;
+        for (let i = 0; i < d.length; i += 4) {
+          const n = (Math.random() - 0.5) * 28;
+          d[i] = Math.max(0, Math.min(255, d[i] + n));
+          d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + n * 0.62));
+          d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + n * 0.38));
+        }
+        ctx.putImageData(id, 0, 0);
+        return texFinish(new THREE.CanvasTexture(cv));
+      }
+      function makeDeepStone() {
+        const S = 512,
+          cv = document.createElement("canvas");
+        cv.width = cv.height = S;
+        const ctx = cv.getContext("2d");
+        ctx.fillStyle = "rgb(28,18,10)";
+        ctx.fillRect(0, 0, S, S);
+        const id = ctx.getImageData(0, 0, S, S),
+          d = id.data;
+        for (let i = 0; i < d.length; i += 4) {
+          const n = (Math.random() - 0.5) * 36;
+          d[i] = Math.max(0, Math.min(255, d[i] + n));
+          d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + n * 0.55));
+          d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + n * 0.32));
+        }
+        ctx.putImageData(id, 0, 0);
+        return texFinish(new THREE.CanvasTexture(cv));
+      }
+      function makeColumnStone() {
+        const S = 384,
+          cv = document.createElement("canvas");
+        cv.width = cv.height = S;
+        const ctx = cv.getContext("2d");
+        const g = ctx.createLinearGradient(0, 0, S, 0);
+        g.addColorStop(0, "rgb(48,34,20)");
+        g.addColorStop(0.5, "rgb(62,46,28)");
+        g.addColorStop(1, "rgb(44,32,18)");
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, S, S);
+        for (let x = 0; x < S; x += 3) {
+          ctx.strokeStyle = `rgba(0,0,0,${(0.35 + Math.sin(x * 0.09) * 0.25) * 0.12})`;
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x + Math.sin(x * 0.2) * 2, S);
+          ctx.stroke();
+        }
+        return texFinish(new THREE.CanvasTexture(cv));
+      }
+
+      const TX = {
+        wall: makeWallStone(),
+        floor: makeFloorStone(),
+        ceil: makeCeilingStone(),
+        dark: makeDeepStone(),
+        column: makeColumnStone(),
+        arena: makeWallStone(),
+      };
+      const BUMP_WALL = makeBumpNoise(256, 34),
+        BUMP_FLOOR = makeBumpNoise(256, 44),
+        BUMP_METAL = makeBumpNoise(128, 26);
+
+      function makeMetal(r, g, b) {
+        const S = 256,
+          cv = document.createElement("canvas");
+        cv.width = cv.height = S;
+        const ctx = cv.getContext("2d");
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(0, 0, S, S);
+        const id = ctx.getImageData(0, 0, S, S),
+          d = id.data;
+        for (let i = 0; i < d.length; i += 4) {
+          const n = (Math.random() - 0.5) * 28;
+          d[i] = Math.max(0, Math.min(255, d[i] + n));
+          d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + n * 0.72));
+          d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + n * 0.42));
+        }
+        ctx.putImageData(id, 0, 0);
+        return texFinish(new THREE.CanvasTexture(cv));
+      }
+      function makeWood(r, g, b) {
+        const S = 256,
+          cv = document.createElement("canvas");
+        cv.width = cv.height = S;
+        const ctx = cv.getContext("2d");
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(0, 0, S, S);
+        const id = ctx.getImageData(0, 0, S, S),
+          d = id.data;
+        for (let i = 0; i < d.length; i += 4) {
+          const x = (i / 4) % S,
+            y = ~~(i / 4 / S);
+          const grain = Math.sin(y * 0.14 + Math.sin(x * 0.045) * 9) * 14;
+          const n = (Math.random() - 0.5) * 16;
+          d[i] = Math.max(0, Math.min(255, d[i] + grain + n));
+          d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + grain * 0.58 + n * 0.48));
+          d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + grain * 0.28 + n * 0.28));
+        }
+        ctx.putImageData(id, 0, 0);
+        return texFinish(new THREE.CanvasTexture(cv));
+      }
+
+      const TX_METAL_DARK = makeMetal(34, 24, 11),
+        TX_METAL_MID = makeMetal(68, 48, 20),
+        TX_METAL_LT = makeMetal(102, 76, 30);
+      const TX_WOOD = makeWood(46, 28, 9),
+        TX_WOOD_LT = makeWood(58, 36, 12);
+      const TX_GOLD = makeMetal(175, 132, 44),
+        TX_FRAME = makeWood(34, 20, 7);
+
+      function bmat(col) {
+        return new THREE.MeshBasicMaterial({ color: col });
+      }
+      const M = {
+        gold: bmat(0xf5c040),
+        fire: bmat(0xff8c22),
+        inv: new THREE.MeshBasicMaterial({ visible: false, depthWrite: false }),
+      };
+
+      function tmat(tex, bump, rx, ry, opts = {}) {
+        const t = tex.clone();
+        t.repeat.set(rx, ry);
+        t.needsUpdate = true;
+        const mat = new THREE.MeshPhongMaterial({
+          map: t,
+          color: opts.color != null ? opts.color : 0xffffff,
+          specular: new THREE.Color(opts.specular || 0x221c14),
+          shininess: opts.shininess || 12,
+        });
+        if (bump) {
+          const bc = bump.clone();
+          bc.repeat.set(rx, ry);
+          bc.needsUpdate = true;
+          mat.bumpMap = bc;
+          mat.bumpScale = opts.bumpScale || 0.055;
+        }
+        return mat;
+      }
+      function frameMat(rx, ry) {
+        return tmat(TX_FRAME, BUMP_WALL, rx, ry, {
+          specular: 0x1a1008,
+          shininess: 18,
+          bumpScale: 0.045,
+        });
+      }
+      function makePanelBlankMat() {
+        const map = TX.dark.clone();
+        map.repeat.set(2.4, 2.6);
+        map.needsUpdate = true;
+        const bump = BUMP_WALL.clone();
+        bump.repeat.set(16, 16);
+        bump.needsUpdate = true;
+        return new THREE.MeshPhongMaterial({
+          color: 0x1a1410,
+          map,
+          bumpMap: bump,
+          bumpScale: 0.07,
+          specular: 0x181410,
+          shininess: 6,
+          side: THREE.DoubleSide,
+        });
+      }
+      function metalPhong(tex, spec, shine, bScale) {
+        const t = tex.clone();
+        t.repeat.set(1, 1);
+        t.needsUpdate = true;
+        const b = BUMP_METAL.clone();
+        b.repeat.set(4, 4);
+        b.needsUpdate = true;
+        return new THREE.MeshPhongMaterial({
+          map: t,
+          bumpMap: b,
+          bumpScale: bScale,
+          color: 0xffffff,
+          specular: new THREE.Color(spec),
+          shininess: shine,
+        });
+      }
+
+      // stimulus set (gardiner ids)
+      const GLYPH_FONT =
+        '"Noto Sans Egyptian Hieroglyphs","Segoe UI Historic","Noto Sans Symbols 2",serif';
+      const GLYPHS = [
+        { ch: "\u{13080}", id: "D010", name: "Eye (D10)", u: "U+13080" },
+        { ch: "\u{1308B}", id: "D021", name: "Mouth (D21)", u: "U+1308B" },
+        { ch: "\u{1309D}", id: "D036", name: "Hand (D36)", u: "U+1309D" },
+        { ch: "\u{13153}", id: "G017", name: "Owl (G17)", u: "U+13153" },
+        { ch: "\u{13184}", id: "H006", name: "Feather (H6)", u: "U+13184" },
+        { ch: "\u{13191}", id: "I009", name: "Horned viper (I9)", u: "U+13191" },
+        { ch: "\u{13193}", id: "I010", name: "Cobra (I10)", u: "U+13193" },
+        { ch: "\u{13216}", id: "N035", name: "Water (N35)", u: "U+13216" },
+        { ch: "\u{131FC}", id: "N014", name: "Star (N14)", u: "U+131FC" },
+        { ch: "\u{133CF}", id: "X001", name: "Loaf (X1)", u: "U+133CF" },
+        { ch: "\u{131F3}", id: "N005", name: "Sun (N5)", u: "U+131F3" },
+        { ch: "\u{132BD}", id: "R011", name: "Djed pillar (R11)", u: "U+132BD" },
+      ];
+      const N_GLYPHS = GLYPHS.length;
+
+      function drawTile(ctx, S, gi, glow) {
+        ctx.fillStyle = "#3d2e18";
+        ctx.fillRect(0, 0, S, S);
+        const id = ctx.getImageData(0, 0, S, S),
+          d = id.data;
+        for (let i = 0; i < d.length; i += 4) {
+          const n = (Math.random() - 0.5) * 22;
+          d[i] = Math.max(0, Math.min(255, d[i] + n));
+          d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + n * 0.65));
+          d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + n * 0.38));
+        }
+        ctx.putImageData(id, 0, 0);
+        ctx.strokeStyle = "rgba(200,150,70,.75)";
+        ctx.lineWidth = 5;
+        ctx.strokeRect(3, 3, S - 6, S - 6);
+        ctx.strokeStyle = "rgba(120,80,30,.45)";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(10, 10, S - 20, S - 20);
+        const ch = GLYPHS[gi].ch;
+        const pad = Math.max(10, Math.floor(S * 0.06));
+        const maxBox = S - pad * 2;
+        let fs = Math.floor(S * 0.78);
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        for (let step = 0; step < 18; step++) {
+          ctx.font = `${fs}px ${GLYPH_FONT}`;
+          const m = ctx.measureText(ch);
+          const asc = m.actualBoundingBoxAscent != null ? m.actualBoundingBoxAscent : fs * 0.62;
+          const desc = m.actualBoundingBoxDescent != null ? m.actualBoundingBoxDescent : fs * 0.38;
+          if (m.width <= maxBox && asc + desc <= maxBox) break;
+          fs = Math.max(Math.floor(fs * 0.9), Math.floor(S * 0.28));
+        }
+        const m = ctx.measureText(ch);
+        const asc = m.actualBoundingBoxAscent != null ? m.actualBoundingBoxAscent : fs * 0.62;
+        const desc = m.actualBoundingBoxDescent != null ? m.actualBoundingBoxDescent : fs * 0.38;
+        let yPos = S * 0.5 + (asc - desc) * 0.5;
+        yPos = Math.min(S - pad - desc * 0.2, Math.max(pad + asc * 0.2, yPos));
+        if (glow) {
+          ctx.save();
+          ctx.shadowBlur = 32;
+          ctx.shadowColor = "rgba(255,200,80,.9)";
+          ctx.fillStyle = "rgba(255,236,160,1)";
+          ctx.fillText(ch, S / 2, yPos);
+          ctx.restore();
+        } else {
+          ctx.fillStyle = "rgba(255,220,120,1)";
+          ctx.fillText(ch, S / 2, yPos);
+        }
+      }
+
+      let PTEX, GTEX, PMAT, GMAT;
+
+      // corridor mesh
+      const CW = 7.55,
+        CH = 8.45;
+      const PAINT_Z0 = 5.75,
+        PAINT_SPACING = 5.5,
+        CORRIDOR_TAIL = 14;
+      let worldGrp = null;
+      const DM = new THREE.Object3D();
+
+      function disposeGrp(grp) {
+        grp.traverse((o) => {
+          if (!o.isMesh && !o.isInstancedMesh) return;
+          if (o.geometry) o.geometry.dispose();
+          const mm = Array.isArray(o.material) ? o.material : [o.material];
+          mm.forEach((m) => {
+            if (!m) return;
+            if (typeof PMAT !== "undefined" && PMAT.includes(m)) return;
+            if (typeof GMAT !== "undefined" && GMAT.includes(m)) return;
+            if (m.map) m.map.dispose();
+            m.dispose();
+          });
+        });
+      }
+
+      function buildLevel(seq) {
+        if (worldGrp) {
+          disposeGrp(worldGrp);
+          scene.remove(worldGrp);
+        }
+        TORCH_LIGHTS.forEach((l) => (l.visible = false));
+        const grp = new THREE.Group(),
+          panels = [];
+        const nP = seq.length;
+        const cLen = nP * PAINT_SPACING + CORRIDOR_TAIL;
+        const cZ0 = 3.92,
+          cZ1 = cZ0 - cLen;
+
+        function stat(geo, mat, x, y, z, ry = 0) {
+          const m = new THREE.Mesh(geo, mat);
+          m.position.set(x, y, z);
+          if (ry) m.rotation.y = ry;
+          m.matrixAutoUpdate = false;
+          m.updateMatrix();
+          grp.add(m);
+          return m;
+        }
+
+        const rH = Math.ceil(cLen / 5);
+        stat(
+          new THREE.BoxGeometry(CW, 0.4, cLen),
+          tmat(TX.floor, BUMP_FLOOR, 5, rH, { bumpScale: 0.085, shininess: 22 }),
+          0,
+          -0.2,
+          cZ0 - cLen / 2,
+        );
+        stat(
+          new THREE.BoxGeometry(CW, 0.4, cLen),
+          tmat(TX.ceil, BUMP_WALL, 4, rH, { bumpScale: 0.035, shininess: 7 }),
+          0,
+          CH + 0.2,
+          cZ0 - cLen / 2,
+        );
+        stat(
+          new THREE.BoxGeometry(0.4, CH, cLen),
+          tmat(TX.wall, BUMP_WALL, rH, 2, { bumpScale: 0.05 }),
+          -CW / 2,
+          CH / 2,
+          cZ0 - cLen / 2,
+        );
+        stat(
+          new THREE.BoxGeometry(0.4, CH, cLen),
+          tmat(TX.wall, BUMP_WALL, rH, 2, { bumpScale: 0.05 }),
+          CW / 2,
+          CH / 2,
+          cZ0 - cLen / 2,
+        );
+        stat(
+          new THREE.BoxGeometry(CW + 1, CH, 0.4),
+          tmat(TX.dark, BUMP_WALL, 4, 2, { bumpScale: 0.072 }),
+          0,
+          CH / 2,
+          cZ1 - 0.2,
+        );
+
+        // torches along z
+        const tSpacing = Math.max(12, cLen / 11);
+        let tIdx = 0;
+        for (let z = cZ0 - 4; z > cZ1 + 2 && tIdx < TORCH_LIGHTS.length; z -= tSpacing, tIdx++) {
+          const sd = tIdx % 2 === 0 ? -1 : 1;
+          TORCH_LIGHTS[tIdx].position.set(sd * (CW / 2 - 0.4), CH * 0.64 + 0.46, z);
+          TORCH_LIGHTS[tIdx].intensity = 3.95;
+          TORCH_LIGHTS[tIdx].visible = true;
+        }
+
+        // framed panels + planes
+        const paintY = CH * 0.404,
+          ph = 1.84,
+          pw = 1.7;
+        const plGeo = new THREE.PlaneGeometry(2.78, 3.04);
+        for (let i = 0; i < nP; i++) {
+          const gi = seq[i],
+            pz = cZ0 - PAINT_Z0 - i * PAINT_SPACING;
+          const sd = i % 2 === 0 ? -1 : 1,
+            px = sd * (CW / 2 - 0.17);
+          stat(new THREE.BoxGeometry(0.11, 3.72, 3.2), frameMat(1.15, 4.9), px, paintY, pz);
+          stat(new THREE.BoxGeometry(0.11, 0.32, 3.2), frameMat(3.25, 0.38), px, paintY + ph, pz);
+          stat(new THREE.BoxGeometry(0.11, 0.32, 3.2), frameMat(3.25, 0.38), px, paintY - ph, pz);
+          stat(new THREE.BoxGeometry(0.11, 3.72, 0.3), frameMat(0.42, 4.9), px, paintY, pz + pw);
+          stat(new THREE.BoxGeometry(0.11, 3.72, 0.3), frameMat(0.42, 4.9), px, paintY, pz - pw);
+          const plane = new THREE.Mesh(plGeo, makePanelBlankMat());
+          plane.userData.panelIdx = i;
+          plane.position.set(px + sd * -0.12, paintY, pz);
+          plane.rotation.y = sd < 0 ? Math.PI / 2 : -Math.PI / 2;
+          plane.matrixAutoUpdate = false;
+          plane.updateMatrix();
+          grp.add(plane);
+          panels.push({
+            z: pz,
+            gi,
+            mesh: plane,
+            revealed: false,
+            responded: false,
+            glowTimer: null,
+            idx: i,
+            revealTime: 0,
+          });
+        }
+
+        // back wall
+        const wm = tmat(TX.wall, BUMP_WALL, 4, 2, { bumpScale: 0.048 });
+        stat(new THREE.BoxGeometry(CW + 0.6, 0.65, 0.8), wm, 0, CH + 0.34, cZ1 + 3.35);
+        stat(new THREE.BoxGeometry(1.4, CH, 0.92), wm, -CW / 2 + 0.8, CH / 2, cZ1 + 3.35);
+        stat(new THREE.BoxGeometry(1.4, CH, 0.92), wm, CW / 2 - 0.8, CH / 2, cZ1 + 3.35);
+
+        scene.add(grp);
+        worldGrp = grp;
+        const xM = CW / 2 - 0.36;
+        return { panels, cBound: { x0: -xM, x1: xM, z0: cZ1, z1: cZ0 } };
+      }
+
+      // input
+      const euler = new THREE.Euler(0, 0, 0, "YXZ");
+      const KEYS = {};
+      let alive = false,
+        pointerLocked = false,
+        isTouch = false;
+
+      function isPointerLockedOnCanvas() {
+        const el =
+          document.pointerLockElement ||
+          document.mozPointerLockElement ||
+          document.webkitPointerLockElement;
+        return el === C3D;
+      }
+
+      function exitPointerLockIfAny() {
+        if (!isPointerLockedOnCanvas()) return;
+        const ex =
+          document.exitPointerLock ||
+          document.mozExitPointerLock ||
+          document.webkitExitPointerLock;
+        if (ex)
+          try {
+            ex.call(document);
+          } catch (e) {}
+      }
+
+      function tryPointerLock() {
+        if (!alive || isTouch) return;
+        C3D.focus({ preventScroll: true });
+        const el = C3D;
+        const req =
+          el.requestPointerLock ||
+          el.mozRequestPointerLock ||
+          el.webkitRequestPointerLock;
+        if (!req) return;
+        try {
+          const ret = req.call(el);
+          if (ret != null && typeof ret.then === "function") {
+            ret.catch(() => {
+              try {
+                req.call(el);
+              } catch (e2) {}
+            });
+          }
+        } catch (e) {
+          try {
+            req.call(el);
+          } catch (e2) {}
+        }
+      }
+
+      C3D.addEventListener(
+        "pointerdown",
+        (e) => {
+          if (!alive || isTouch || e.button !== 0) return;
+          if (!pointerLocked && G.phase === "corridor") {
+            e.preventDefault();
+            tryPointerLock();
+            return;
+          }
+          if (G.phase === "corridor" && G.awaitingResponse) return;
+        },
+        true,
+      );
+      LOCKHINT.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!alive || isTouch) return;
+        tryPointerLock();
+      });
+
+      // LMB match, RMB no-match
+      C3D.addEventListener("mousedown", (e) => {
+        if (!alive) return;
+        if (e.button === 0 && G.phase === "corridor" && G.awaitingResponse) {
+          G.respond(1);
+          return;
+        }
+        if (e.button === 2 && G.phase === "corridor" && G.awaitingResponse) {
+          e.preventDefault();
+          G.respond(2);
+          return;
+        }
+        if (e.button === 0 && !pointerLocked && !isTouch) tryPointerLock();
+      });
+      C3D.addEventListener("contextmenu", (e) => e.preventDefault());
+
+      document.addEventListener("pointerlockchange", () => {
+        pointerLocked = isPointerLockedOnCanvas();
+        if (pointerLocked) {
+          LOCKHINT.classList.remove("show");
+          C3D.style.cursor = "none";
+        } else {
+          if (alive && G.phase === "corridor") LOCKHINT.classList.add("show");
+          C3D.style.cursor = "crosshair";
+        }
+      });
+      document.addEventListener("pointerlockerror", () => {
+        pointerLocked = false;
+        C3D.style.cursor = "crosshair";
+        if (alive && G.phase === "corridor") LOCKHINT.classList.add("show");
+      });
+      document.addEventListener("mousemove", (e) => {
+        if (!pointerLocked || !alive) return;
+        euler.y -= e.movementX * mouseSens;
+        euler.x = Math.max(-1.38, Math.min(1.38, euler.x - e.movementY * mouseSens));
+        cam.quaternion.setFromEuler(euler);
+      });
+
+      let lookId = -1,
+        tdist = 0,
+        tlx = 0,
+        tly = 0,
+        joyVx = 0,
+        joyVy = 0;
+      function setTouchMode() {
+        if (!isTouch) {
+          isTouch = true;
+          document.body.classList.add("is-touch");
+          const p = LOCKHINT.querySelector("p");
+          if (p) p.textContent = "TAP TO BEGIN";
+        }
+      }
+      C3D.addEventListener(
+        "touchstart",
+        (e) => {
+          e.preventDefault();
+          setTouchMode();
+          for (const t of e.changedTouches) {
+            if (lookId === -1) {
+              lookId = t.identifier;
+              tdist = 0;
+              tlx = t.clientX;
+              tly = t.clientY;
+            }
+          }
+        },
+        { passive: false },
+      );
+      C3D.addEventListener(
+        "touchmove",
+        (e) => {
+          e.preventDefault();
+          for (const t of e.changedTouches) {
+            if (t.identifier === lookId) {
+              const dx = t.clientX - tlx,
+                dy = t.clientY - tly;
+              tdist += Math.abs(dx) + Math.abs(dy);
+              euler.y -= dx * 0.007;
+              euler.x = Math.max(-1.38, Math.min(1.38, euler.x - dy * 0.007));
+              cam.quaternion.setFromEuler(euler);
+              tlx = t.clientX;
+              tly = t.clientY;
+            }
+          }
+        },
+        { passive: false },
+      );
+      C3D.addEventListener("touchend", (e) => {
+        for (const t of e.changedTouches) {
+          if (t.identifier === lookId) {
+            lookId = -1;
+            if (tdist < 15 && alive && G.phase === "corridor" && G.awaitingResponse) G.respond(1);
+          }
+        }
+      });
+      C3D.addEventListener("touchcancel", (e) => {
+        for (const t of e.changedTouches) if (t.identifier === lookId) lookId = -1;
+      });
+
+      const TJOY = $("t-joystick"),
+        TSTK = $("t-stick"),
+        TPAUSE = $("t-pause");
+      let joyId = -1,
+        joyCX = 0,
+        joyCY = 0,
+        joyR = 60;
+      TJOY.addEventListener(
+        "touchstart",
+        (e) => {
+          e.preventDefault();
+          setTouchMode();
+          if (joyId !== -1) return;
+          const t = e.changedTouches[0];
+          joyId = t.identifier;
+          const rect = TJOY.getBoundingClientRect();
+          joyCX = rect.left + rect.width / 2;
+          joyCY = rect.top + rect.height / 2;
+          joyR = rect.width / 2;
+          updateJoy(t.clientX, t.clientY);
+        },
+        { passive: false },
+      );
+      TJOY.addEventListener(
+        "touchmove",
+        (e) => {
+          e.preventDefault();
+          for (const t of e.changedTouches)
+            if (t.identifier === joyId) updateJoy(t.clientX, t.clientY);
+        },
+        { passive: false },
+      );
+      const endJoy = (e) => {
+        for (const t of e.changedTouches)
+          if (t.identifier === joyId) {
+            joyId = -1;
+            joyVx = 0;
+            joyVy = 0;
+            TSTK.style.transform = "translate(0px,0px)";
+          }
+      };
+      TJOY.addEventListener("touchend", endJoy);
+      TJOY.addEventListener("touchcancel", endJoy);
+      function updateJoy(tx, ty) {
+        let dx = tx - joyCX,
+          dy = ty - joyCY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > joyR) {
+          dx = (dx / dist) * joyR;
+          dy = (dy / dist) * joyR;
+        }
+        TSTK.style.transform = `translate(${dx}px,${dy}px)`;
+        joyVx = dx / joyR;
+        joyVy = dy / joyR;
+      }
+      TPAUSE.addEventListener("click", () => {
+        if (G.phase === "paused") resumeGame();
+        else pauseGame();
+      });
+
+      $("rb-match").addEventListener("click", () => {
+        if (G.phase === "corridor" && G.awaitingResponse) G.respond(1);
+      });
+      $("rb-nomatch").addEventListener("click", () => {
+        if (G.phase === "corridor" && G.awaitingResponse) G.respond(2);
+      });
+
+      document.addEventListener("keydown", (e) => {
+        KEYS[e.code] = true;
+        if (e.code === "Space" || e.code === "ShiftLeft" || e.code === "ShiftRight")
+          e.preventDefault();
+        if (e.code === "Escape" && alive) {
+          e.preventDefault();
+          if (ACCSUB.classList.contains("show")) {
+            ACCSUB.classList.remove("show");
+            return;
+          }
+          if (G.phase === "paused") {
+            resumeGame();
+            return;
+          }
+          pauseGame();
+          return;
+        }
+        if (
+          !e.repeat &&
+          G.phase === "corridor" &&
+          G.awaitingResponse &&
+          (e.code === "KeyF" || e.code === "Space")
+        ) {
+          G.respond(1);
+          return;
+        }
+        if (!e.repeat && G.phase === "corridor" && G.awaitingResponse && e.code === "KeyJ") {
+          G.respond(2);
+          return;
+        }
+      });
+      document.addEventListener("keyup", (e) => {
+        KEYS[e.code] = false;
+      });
+
+      // movement
+      const EYE_HEIGHT = 1.78;
+      function moveCam(dt, b) {
+        const sy = Math.sin(euler.y),
+          cy = Math.cos(euler.y);
+        const sprint = KEYS["ShiftLeft"] || KEYS["ShiftRight"] || joyVy < -0.8;
+        const spd = sprint ? 8.0 : 4.2;
+        if (KEYS["KeyW"] || KEYS["ArrowUp"]) {
+          cam.position.x -= sy * spd * dt;
+          cam.position.z -= cy * spd * dt;
+        }
+        if (KEYS["KeyS"] || KEYS["ArrowDown"]) {
+          cam.position.x += sy * spd * dt;
+          cam.position.z += cy * spd * dt;
+        }
+        if (KEYS["KeyA"] || KEYS["ArrowLeft"]) {
+          cam.position.x -= cy * spd * 0.7 * dt;
+          cam.position.z += sy * spd * 0.7 * dt;
+        }
+        if (KEYS["KeyD"] || KEYS["ArrowRight"]) {
+          cam.position.x += cy * spd * 0.7 * dt;
+          cam.position.z -= sy * spd * 0.7 * dt;
+        }
+        if (Math.abs(joyVy) > 0.05) {
+          cam.position.x += sy * spd * joyVy * dt;
+          cam.position.z += cy * spd * joyVy * dt;
+        }
+        if (Math.abs(joyVx) > 0.05) {
+          cam.position.x += cy * spd * 0.7 * joyVx * dt;
+          cam.position.z -= sy * spd * 0.7 * joyVx * dt;
+        }
+        cam.position.y = EYE_HEIGHT;
+        cam.position.x = Math.max(b.x0, Math.min(b.x1, cam.position.x));
+        cam.position.z = Math.max(b.z0, Math.min(b.z1, cam.position.z));
+      }
+
+      // revolver + tracers (cheap)
+      let recoil = 0,
+        mflash = 0;
+      function trigRecoil() {
+        recoil = 1;
+        mflash = 1;
+        spawnBullet();
+      }
+
+      const gunGroup = new THREE.Group();
+      gunGroup.visible = false;
+      cam.add(gunGroup);
+      scene.add(cam);
+
+      (function buildGun3D() {
+        const metalDark = metalPhong(TX_METAL_DARK, 0x2a2018, 38, 0.042);
+        const metalMid = metalPhong(TX_METAL_MID, 0x443628, 52, 0.036);
+        const metalLt = metalPhong(TX_METAL_LT, 0x554433, 58, 0.032);
+        const wood = tmat(TX_WOOD, BUMP_WALL, 1, 2.4, {
+          specular: 0x181008,
+          shininess: 16,
+          bumpScale: 0.022,
+        });
+        const woodLt = tmat(TX_WOOD_LT, BUMP_WALL, 1, 2, {
+          specular: 0x221808,
+          shininess: 20,
+          bumpScale: 0.02,
+        });
+        const tg = TX_GOLD.clone();
+        tg.repeat.set(1, 1);
+        tg.needsUpdate = true;
+        const gb = BUMP_METAL.clone();
+        gb.repeat.set(5, 5);
+        gb.needsUpdate = true;
+        const gold = new THREE.MeshPhongMaterial({
+          map: tg,
+          bumpMap: gb,
+          bumpScale: 0.016,
+          color: 0xffffff,
+          specular: 0x887755,
+          shininess: 72,
+          emissive: 0x3a2818,
+        });
+
+        const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.015, 0.52, 16), metalMid);
+        barrel.rotation.x = Math.PI / 2;
+        barrel.position.set(0, 0, -0.26);
+        gunGroup.add(barrel);
+        const barrelInner = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.008, 0.008, 0.53, 12),
+          new THREE.MeshBasicMaterial({ color: 0x060402 }),
+        );
+        barrelInner.rotation.x = Math.PI / 2;
+        barrelInner.position.set(0, 0, -0.265);
+        gunGroup.add(barrelInner);
+        const barrelTip = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.017, 0.012, 0.04, 16),
+          metalDark,
+        );
+        barrelTip.rotation.x = Math.PI / 2;
+        barrelTip.position.set(0, 0, -0.52);
+        gunGroup.add(barrelTip);
+        const muzzleRing = new THREE.Mesh(new THREE.TorusGeometry(0.018, 0.004, 6, 12), gold);
+        muzzleRing.position.set(0, 0, -0.53);
+        gunGroup.add(muzzleRing);
+        const cylinder = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.028, 0.028, 0.05, 16),
+          metalMid,
+        );
+        cylinder.rotation.z = Math.PI / 2;
+        cylinder.position.set(0, 0.005, -0.08);
+        gunGroup.add(cylinder);
+        const cylCap1 = new THREE.Mesh(new THREE.CircleGeometry(0.028, 16), metalDark);
+        cylCap1.rotation.y = Math.PI / 2;
+        cylCap1.position.set(0.026, 0.005, -0.08);
+        gunGroup.add(cylCap1);
+        const cylCap2 = new THREE.Mesh(new THREE.CircleGeometry(0.028, 16), metalDark);
+        cylCap2.rotation.y = -Math.PI / 2;
+        cylCap2.position.set(-0.026, 0.005, -0.08);
+        gunGroup.add(cylCap2);
+        for (let c = 0; c < 6; c++) {
+          const a = (c / 6) * Math.PI * 2;
+          const ch = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.006, 0.006, 0.052, 6),
+            new THREE.MeshBasicMaterial({ color: 0x0a0804 }),
+          );
+          ch.rotation.z = Math.PI / 2;
+          ch.position.set(Math.sin(a) * 0.016, 0.005 + Math.cos(a) * 0.016, -0.08);
+          gunGroup.add(ch);
+        }
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.055, 0.16), metalLt);
+        body.position.set(0, -0.01, -0.06);
+        gunGroup.add(body);
+        const bodyTop = new THREE.Mesh(new THREE.BoxGeometry(0.058, 0.015, 0.18), metalMid);
+        bodyTop.position.set(0, 0.02, -0.07);
+        gunGroup.add(bodyTop);
+        const hammer = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.03, 0.02), metalDark);
+        hammer.position.set(0, 0.035, 0.02);
+        gunGroup.add(hammer);
+        const trigger = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.025, 0.015), metalDark);
+        trigger.position.set(0, -0.04, -0.01);
+        trigger.rotation.x = 0.3;
+        gunGroup.add(trigger);
+        const guard = new THREE.Mesh(
+          new THREE.TorusGeometry(0.022, 0.004, 6, 10, Math.PI),
+          metalMid,
+        );
+        guard.position.set(0, -0.035, -0.015);
+        guard.rotation.x = Math.PI;
+        guard.rotation.y = Math.PI / 2;
+        gunGroup.add(guard);
+        const grip = new THREE.Mesh(new THREE.BoxGeometry(0.048, 0.1, 0.04), wood);
+        grip.position.set(0, -0.085, 0.015);
+        grip.rotation.x = -0.22;
+        gunGroup.add(grip);
+        for (let i = 0; i < 4; i++) {
+          const line = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.002, 0.001), metalDark);
+          line.position.set(0, -0.055 - i * 0.018, 0.015 + i * 0.003);
+          line.rotation.x = -0.22;
+          gunGroup.add(line);
+        }
+        const gripCap = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.012, 0.044), woodLt);
+        gripCap.position.set(0, -0.132, 0.03);
+        gripCap.rotation.x = -0.22;
+        gunGroup.add(gripCap);
+        const band1 = new THREE.Mesh(new THREE.TorusGeometry(0.016, 0.003, 6, 12), gold);
+        band1.rotation.x = Math.PI / 2;
+        band1.position.set(0, 0, -0.18);
+        gunGroup.add(band1);
+        const band2 = new THREE.Mesh(new THREE.TorusGeometry(0.014, 0.003, 6, 12), gold);
+        band2.rotation.x = Math.PI / 2;
+        band2.position.set(0, 0, -0.38);
+        gunGroup.add(band2);
+        const frontSight = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.012, 0.004), metalDark);
+        frontSight.position.set(0, 0.03, -0.5);
+        gunGroup.add(frontSight);
+        const rearSight = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.01, 0.004), metalDark);
+        rearSight.position.set(0, 0.028, -0.04);
+        gunGroup.add(rearSight);
+        const rearNotch = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.012, 0.006), metalLt);
+        rearNotch.position.set(0, 0.032, -0.04);
+        gunGroup.add(rearNotch);
+        gunGroup.position.set(0.22, -0.18, -0.32);
+        gunGroup.rotation.set(0, 0, 0);
+      })();
+
+      const muzzleFlash = new THREE.PointLight(0xffaa44, 0, 8);
+      muzzleFlash.position.set(0, 0, -0.56);
+      gunGroup.add(muzzleFlash);
+      const muzzleCone = new THREE.Mesh(
+        new THREE.ConeGeometry(0.015, 0.06, 8),
+        new THREE.MeshBasicMaterial({ color: 0xffcc44, transparent: true, opacity: 0 }),
+      );
+      muzzleCone.rotation.x = Math.PI / 2;
+      muzzleCone.position.set(0, 0, -0.56);
+      gunGroup.add(muzzleCone);
+
+      const BULLETS = [];
+      const bulletGeo = new THREE.CylinderGeometry(0.008, 0.004, 0.06, 6);
+      const bulletMat = new THREE.MeshPhongMaterial({
+        map: TX_GOLD.clone(),
+        bumpMap: BUMP_METAL.clone(),
+        bumpScale: 0.03,
+        color: 0xffe8a8,
+        specular: 0x665533,
+        shininess: 48,
+        emissive: 0x553010,
+      });
+      bulletMat.map.repeat.set(2, 2);
+      bulletMat.map.needsUpdate = true;
+      bulletMat.bumpMap.repeat.set(4, 4);
+      bulletMat.bumpMap.needsUpdate = true;
+      const bulletTrailMat = new THREE.MeshBasicMaterial({
+        color: 0xffaa22,
+        transparent: true,
+        opacity: 0.6,
+      });
+      const bulletTrailGeo = new THREE.CylinderGeometry(0.002, 0.001, 0.3, 4);
+      const _bTmp = new THREE.Vector3(),
+        _bMove = new THREE.Vector3(),
+        _bTrailOff = new THREE.Vector3();
+
+      function spawnBullet() {
+        cam.getWorldDirection(_bTmp);
+        const pos = _bMove.copy(_bTmp).multiplyScalar(0.6).add(cam.position);
+        const b = new THREE.Mesh(bulletGeo, bulletMat);
+        b.position.copy(pos);
+        b.quaternion.copy(cam.quaternion);
+        b.rotateX(Math.PI / 2);
+        scene.add(b);
+        const trail = new THREE.Mesh(bulletTrailGeo, bulletTrailMat.clone());
+        trail.position.copy(pos);
+        trail.quaternion.copy(b.quaternion);
+        scene.add(trail);
+        const light = new THREE.PointLight(0xf5a030, 2, 4);
+        light.position.copy(pos);
+        scene.add(light);
+        BULLETS.push({ mesh: b, trail, light, dir: _bTmp.clone(), life: 1.0, speed: 80 });
+      }
+      function clearBullets() {
+        for (let i = BULLETS.length - 1; i >= 0; i--) {
+          const b = BULLETS[i];
+          scene.remove(b.mesh);
+          scene.remove(b.trail);
+          scene.remove(b.light);
+          if (b.trail && b.trail.material) b.trail.material.dispose();
+        }
+        BULLETS.length = 0;
+      }
+      function updateBullets(dt) {
+        for (let i = BULLETS.length - 1; i >= 0; i--) {
+          const b = BULLETS[i];
+          b.life -= dt * 2.5;
+          _bMove.copy(b.dir).multiplyScalar(b.speed * dt);
+          b.mesh.position.add(_bMove);
+          _bTrailOff.copy(b.dir).multiplyScalar(0.15).add(b.mesh.position);
+          b.trail.position.copy(_bTrailOff);
+          b.trail.material.opacity = b.life * 0.5;
+          b.light.position.copy(b.mesh.position);
+          b.light.intensity = b.life * 3;
+          if (b.life <= 0) {
+            scene.remove(b.mesh);
+            scene.remove(b.trail);
+            scene.remove(b.light);
+            b.trail.material.dispose();
+            BULLETS.splice(i, 1);
+          }
+        }
+      }
+
+      function drawGun(t) {
+        if (G.phase !== "corridor") {
+          gunGroup.visible = false;
+          recoil = Math.max(0, recoil - 0.08);
+          mflash = Math.max(0, mflash - 0.1);
+          muzzleFlash.intensity = 0;
+          muzzleCone.material.opacity = 0;
+          return;
+        }
+        gunGroup.visible = true;
+        const bob = Math.sin(t * 0.003) * 0.003 + Math.cos(t * 0.007) * 0.001;
+        const kickZ = recoil * 0.06,
+          kickR = recoil * 0.08;
+        recoil = Math.max(0, recoil - 0.06);
+        gunGroup.position.set(0.22, -0.18 + bob, -0.32 + kickZ);
+        gunGroup.rotation.set(-kickR * 0.5, 0, kickR * 0.3);
+        if (mflash > 0) {
+          muzzleFlash.intensity = mflash * 10;
+          muzzleCone.material.opacity = mflash * 0.8;
+          mflash = Math.max(0, mflash - 0.08);
+        } else {
+          muzzleFlash.intensity = 0;
+          muzzleCone.material.opacity = 0;
+        }
+      }
+
+      // a11y toggles
+      const ACC = {
+        labels: false,
+        hc: false,
+        largexh: false,
+        lowsens: false,
+        mute: false,
+        longglow: false,
+      };
+      let mouseSens = 0.0022;
+      function accToggle(key) {
+        ACC[key] = !ACC[key];
+        const el = $("t-" + key);
+        if (el) {
+          el.classList.toggle("on", ACC[key]);
+          el.setAttribute("aria-checked", String(ACC[key]));
+        }
+        document.body.classList.toggle("acc-" + key, ACC[key]);
+        if (key === "lowsens") mouseSens = ACC.lowsens ? 0.001 : 0.0022;
+        if (key === "mute" && audioCtx) {
+          if (ACC.mute) audioCtx.suspend();
+          else audioCtx.resume();
+        }
+      }
+      ["hc", "labels", "largexh", "lowsens", "mute", "longglow"].forEach((k) => {
+        const el = $("t-" + k);
+        if (el) el.addEventListener("click", () => accToggle(k));
+      });
+
+      // sequence builder: N observe-only panels + 70 scored trials (length N + 70)
+      function randInt(n) {
+        return Math.floor(Math.random() * n);
+      }
+      function randPick(arr) {
+        return arr[randInt(arr.length)];
+      }
+      function shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = randInt(i + 1);
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      }
+
+      function genSeq70(N) {
+        const total = N + TOTAL_TRIALS;
+        const seq = new Array(total);
+        const isMatch = new Array(total).fill(false);
+
+        const matchable = [];
+        for (let i = N; i < total; i++) matchable.push(i);
+        shuffle(matchable);
+        const numMatches = Math.min(MATCH_COUNT, matchable.length);
+        for (let i = 0; i < numMatches; i++) isMatch[matchable[i]] = true;
+
+        for (let i = 0; i < N; i++) seq[i] = randInt(N_GLYPHS);
+        for (let i = N; i < total; i++) {
+          if (isMatch[i]) {
+            seq[i] = seq[i - N];
+          } else {
+            const pool = [];
+            for (let g = 0; g < N_GLYPHS; g++) if (g !== seq[i - N]) pool.push(g);
+            seq[i] = randPick(pool);
+          }
+        }
+
+        // repair drift after fills
+        for (let pass = 0; pass < 5; pass++) {
+          let dirty = false;
+          for (let i = N; i < total; i++) {
+            const matches = seq[i] === seq[i - N];
+            if (isMatch[i] && !matches) {
+              seq[i] = seq[i - N];
+              dirty = true;
+            } else if (!isMatch[i] && matches) {
+              const pool = [];
+              for (let g = 0; g < N_GLYPHS; g++) if (g !== seq[i - N]) pool.push(g);
+              seq[i] = randPick(pool);
+              dirty = true;
+            }
+          }
+          if (!dirty) break;
+        }
+
+        return seq;
+      }
+
+      const RES = {
+        pid: "",
+        sid: "",
+        condition: "tDCS",
+        phase: "pre",
+        trials: [],
+        sessionStart: 0,
+        block: 1,
+        exported: false,
+
+        begin() {
+          this.trials = [];
+          this.sessionStart = Date.now();
+          this.block = 1;
+          this.exported = false;
+        },
+        nextBlock() {
+          this.block++;
+        },
+
+        record(o) {
+          const N = o.n;
+          const idx = o.trialIdx;
+          const hasNback = idx >= N;
+          const currentGlyph = o.glyphIdx;
+          const nbackGlyph = hasNback ? o.nbackGlyphIdx : -1;
+          const actualMatch = hasNback && currentGlyph === nbackGlyph;
+
+          const tc = actualMatch ? 1 : 2;
+          const CRESP = actualMatch ? 1 : 2;
+          const Resp = o.resp;
+          const acc = CRESP === Resp ? 1 : 0;
+          const RT = o.rt != null ? Math.round(o.rt) : 0;
+          const trialNum = idx - N + 1;
+          const RSI = o.rsi != null ? Math.round(o.rsi) : 0;
+          const rsiAnchor = trialNum <= 1 ? "prior_stimulus_onset" : "prior_response";
+          const trigCond = currentGlyph + 1;
+          const trigResp = Resp === 1 ? 11 : Resp === 2 ? 12 : 0;
+
+          const stim = GLYPHS[currentGlyph];
+
+          let targetId = "",
+            targetName = "",
+            targetUnicode = "";
+          if (hasNback) {
+            const tgt = GLYPHS[nbackGlyph];
+            targetId = tgt.id;
+            targetName = tgt.name;
+            targetUnicode = tgt.u;
+          }
+
+          this.trials.push({
+            trialType: "scored",
+            painting: idx + 1,
+            warmupIndex: "",
+            trial: trialNum,
+            tc,
+            block: this.block,
+            N: o.n,
+            CRESP,
+            Resp,
+            ACC: acc,
+            RT,
+            RSI,
+            rsiAnchor,
+            TriggerCondition: trigCond,
+            TriggerResponse: trigResp,
+            Stimulus: stim.id,
+            StimulusName: stim.name,
+            StimulusUnicode: stim.u,
+            Target: targetId,
+            TargetName: targetName,
+            TargetUnicode: targetUnicode,
+          });
+          this.exported = false;
+        },
+
+        recordWarmup(o) {
+          const idx = o.trialIdx;
+          const N = o.n;
+          const currentGlyph = o.glyphIdx;
+          const stim = GLYPHS[currentGlyph];
+          const RSI = o.rsi != null ? Math.round(o.rsi) : 0;
+          const rsiAnchor = idx === 0 ? "none" : "prior_stimulus_onset";
+
+          this.trials.push({
+            trialType: "warmup",
+            painting: idx + 1,
+            warmupIndex: idx + 1,
+            trial: "",
+            tc: "",
+            CRESP: "",
+            Resp: "",
+            ACC: "",
+            RT: "",
+            RSI,
+            rsiAnchor,
+            block: this.block,
+            N,
+            TriggerCondition: currentGlyph + 1,
+            TriggerResponse: "",
+            Stimulus: stim.id,
+            StimulusName: stim.name,
+            StimulusUnicode: stim.u,
+            Target: "",
+            TargetName: "",
+            TargetUnicode: "",
+          });
+          this.exported = false;
+        },
+
+        _scored(b) {
+          const rows = b == null ? this.trials : this.trials.filter((t) => t.block === b);
+          return rows.filter((t) => t.trialType !== "warmup");
+        },
+        accuracy(b) {
+          const t = this._scored(b);
+          if (!t.length) return 0;
+          return Math.round((t.filter((x) => x.ACC === 1).length / t.length) * 1000) / 10;
+        },
+        meanRT(b) {
+          const rts = this._scored(b)
+            .filter((t) => t.RT > 0)
+            .map((t) => t.RT);
+          return rts.length ? Math.round(rts.reduce((s, x) => s + x, 0) / rts.length) : 0;
+        },
+        hits(b) {
+          return this._scored(b).filter((t) => t.tc === 1 && t.Resp === 1).length;
+        },
+        misses(b) {
+          return this._scored(b).filter((t) => t.tc === 1 && t.Resp === 2).length;
+        },
+        falseAlarms(b) {
+          return this._scored(b).filter((t) => t.tc === 2 && t.Resp === 1).length;
+        },
+        correctRejections(b) {
+          return this._scored(b).filter((t) => t.tc === 2 && t.Resp === 2).length;
+        },
+
+        updateBar() {
+          const t = this.trials.filter((x) => x.block === this.block && x.trialType !== "warmup");
+          if (!t.length) {
+            STATSBAR.style.display = "none";
+            return;
+          }
+          STATSBAR.textContent = `T${t.length}/${TOTAL_TRIALS}  ACC ${this.accuracy(this.block)}%  RT ${this.meanRT(this.block) || "--"}ms`;
+          STATSBAR.style.display = "block";
+        },
+
+        exportXLSX() {
+          if (!this.trials.length) {
+            alert("Nothing to export.");
+            return;
+          }
+          if (typeof XLSX === "undefined") {
+            alert("Missing lib/xlsx.full.min.js.");
+            return;
+          }
+
+          const ns = [...new Set(this.trials.map((t) => t.N))].sort((a, b) => a - b);
+          const dateISO = new Date().toISOString();
+          const pid = this.pid || "anon";
+          const sid = this.sid || "";
+
+          const sessionStartISO = this.sessionStart
+            ? new Date(this.sessionStart).toISOString()
+            : "";
+
+          const header = [
+            "PID",
+            "Session",
+            "Condition",
+            "Phase",
+            "sessionStartISO",
+            "exportedAt",
+            "block",
+            "N",
+            "trialType",
+            "painting",
+            "warmupIndex",
+            "trial",
+            "tc",
+            "CRESP",
+            "Resp",
+            "ACC",
+            "RT",
+            "RSI",
+            "rsiAnchor",
+            "TriggerCondition",
+            "TriggerResponse",
+            "Stimulus",
+            "StimulusName",
+            "StimulusUnicode",
+            "Target",
+            "TargetName",
+            "TargetUnicode",
+          ];
+          const rows = this.trials.map((t) => [
+            pid,
+            sid,
+            this.condition,
+            this.phase,
+            sessionStartISO,
+            dateISO,
+            t.block,
+            t.N,
+            t.trialType || "scored",
+            t.painting,
+            t.warmupIndex === "" || t.warmupIndex == null ? "" : t.warmupIndex,
+            t.trial === "" || t.trial == null ? "" : t.trial,
+            t.tc === "" || t.tc == null ? "" : t.tc,
+            t.CRESP === "" || t.CRESP == null ? "" : t.CRESP,
+            t.Resp === "" || t.Resp == null ? "" : t.Resp,
+            t.ACC === "" || t.ACC == null ? "" : t.ACC,
+            t.RT === "" || t.RT == null ? "" : t.RT,
+            t.RSI === "" || t.RSI == null ? "" : t.RSI,
+            t.rsiAnchor || "",
+            t.TriggerCondition,
+            t.TriggerResponse === "" || t.TriggerResponse == null ? "" : t.TriggerResponse,
+            t.Stimulus,
+            t.StimulusName,
+            t.StimulusUnicode,
+            t.Target,
+            t.TargetName,
+            t.TargetUnicode,
+          ]);
+
+          const wb = XLSX.utils.book_new();
+          const sheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
+          sheet["!cols"] = header.map((h) => ({ wch: Math.max(h.length + 2, 10) }));
+          sheet["!freeze"] = { xSplit: 0, ySplit: 1 };
+          XLSX.utils.book_append_sheet(wb, sheet, "Trials");
+
+          const warmupRows = this.trials.filter((t) => t.trialType === "warmup").length;
+          const scoredRows = this.trials.filter((t) => t.trialType !== "warmup").length;
+          const meta = [
+            ["key", "value"],
+            ["exportedAt", dateISO],
+            ["sessionStartISO", sessionStartISO || ""],
+            ["PID", pid],
+            ["Session", sid],
+            ["Condition", this.condition],
+            ["Phase", this.phase],
+            ["scoredTrialsPerBlock_design", TOTAL_TRIALS],
+            ["matchTargetsPerBlock_design", MATCH_COUNT],
+            ["rows_warmup_exported", warmupRows],
+            ["rows_scored_exported", scoredRows],
+            ["trial_column_meaning", "1-70 scored only; blank on warmup rows"],
+            ["trialType_values", "warmup | scored"],
+            [
+              "RSI_ms_meaning",
+              "Milliseconds from rsiAnchor to this stimulus onset (walking + approach). Warm-up + scored trial 1: anchor = prior stimulus onset. Scored trials 2–70: anchor = prior keyed response. RSI is logged on every row.",
+            ],
+            ["rsiAnchor_values", "none | prior_stimulus_onset | prior_response"],
+          ];
+          const metaSheet = XLSX.utils.aoa_to_sheet(meta);
+          metaSheet["!cols"] = [{ wch: 28 }, { wch: 56 }];
+          XLSX.utils.book_append_sheet(wb, metaSheet, "Meta");
+
+          const nTag = ns.length === 1 ? `n${ns[0]}` : `n${ns.join("+")}`;
+          const fn = `glyphmind_${pid}_${this.condition}_${this.phase}_${nTag}_${dateISO.slice(0, 10)}.xlsx`;
+          XLSX.writeFile(wb, fn);
+          this.exported = true;
+        },
+      };
+
+      function discardSessionTrials() {
+        RES.trials = [];
+        RES.exported = false;
+        RES.block = 1;
+      }
+
+      function requireParticipantId() {
+        const raw = $("tt-pid").value.replace(/[^\w\-]/g, "").slice(0, 32);
+        $("tt-pid").value = raw;
+        if (!raw) {
+          alert("Enter a participant ID on the title screen (for example P001).");
+          return false;
+        }
+        return true;
+      }
+
+      // pid / session / condition fields
+      $("tt-pid").addEventListener("input", function () {
+        this.value = this.value.replace(/[^\w\-]/g, "").slice(0, 32);
+        RES.pid = this.value;
+        $("pid").value = this.value;
+      });
+      $("tt-sid").addEventListener("input", function () {
+        this.value = this.value.replace(/[^\w\-]/g, "").slice(0, 32);
+        RES.sid = this.value;
+      });
+      $("pid").addEventListener("input", function () {
+        this.value = this.value.replace(/[^\w\-]/g, "").slice(0, 32);
+        RES.pid = this.value;
+        $("tt-pid").value = this.value;
+      });
+      ["tdcs", "sham", "ctrl"].forEach((id) => {
+        $("cond-" + id).addEventListener("click", () => {
+          document.querySelectorAll(".cond-btn").forEach((b) => b.classList.remove("on"));
+          $("cond-" + id).classList.add("on");
+          RES.condition = { tdcs: "tDCS", sham: "sham", ctrl: "control" }[id];
+        });
+      });
+      ["pre", "during", "post"].forEach((id) => {
+        $("phase-" + id).addEventListener("click", () => {
+          document.querySelectorAll(".phase-btn").forEach((b) => b.classList.remove("on"));
+          $("phase-" + id).classList.add("on");
+          RES.phase = id === "during" ? "during_stimulation" : id;
+        });
+      });
+
+      let selectedN = 3;
+      let customN = 2;
+
+      function selectMode(n, btn) {
+        document.querySelectorAll(".mode-btn").forEach((b) => b.classList.remove("on"));
+        btn.classList.add("on");
+        selectedN = n;
+        $("custom-wrap").classList.toggle("show", n === -1);
+        if (n === -1) selectedN = customN;
+      }
+
+      $("mode-1").addEventListener("click", function () {
+        selectMode(1, this);
+      });
+      $("mode-3").addEventListener("click", function () {
+        selectMode(3, this);
+      });
+      $("mode-custom").addEventListener("click", function () {
+        selectMode(-1, this);
+      });
+      $("tt-nminus").addEventListener("click", () => {
+        customN = Math.max(1, customN - 1);
+        $("tt-nval").textContent = customN;
+        if ($("mode-custom").classList.contains("on")) selectedN = customN;
+      });
+      $("tt-nplus").addEventListener("click", () => {
+        customN = Math.min(12, customN + 1);
+        $("tt-nval").textContent = customN;
+        if ($("mode-custom").classList.contains("on")) selectedN = customN;
+      });
+
+      function pauseGame() {
+        if (G.phase === "busy" || G.phase === "title" || G.phase === "results") return;
+        G._pauseStart = performance.now();
+        pauseAllTimers();
+        ACCSUB.classList.remove("show");
+        G._prev = G.phase;
+        G.phase = "paused";
+        PMENU.classList.add("show");
+        RBAR.classList.remove("show");
+        LOCKHINT.classList.remove("show");
+        exitPointerLockIfAny();
+      }
+      function resumeGame() {
+        ACCSUB.classList.remove("show");
+        if (G._pauseStart) {
+          const pausedMs = performance.now() - G._pauseStart;
+          G._pauseStart = 0;
+          if (G.W && G.W.panels && G.currentTrialIdx >= 0) {
+            const p = G.W.panels[G.currentTrialIdx];
+            if (p && p.revealTime) p.revealTime += pausedMs;
+          }
+          if (G.lastEventTime > 0) G.lastEventTime += pausedMs;
+        }
+        resumeAllTimers();
+        G.phase = G._prev || "corridor";
+        PMENU.classList.remove("show");
+        if (G.awaitingResponse) RBAR.classList.add("show");
+        if (!isTouch && !pointerLocked) LOCKHINT.classList.add("show");
+      }
+
+      // timers that respect pause (safeTimeout / pauseAllTimers / resumeAllTimers)
+      const _safeTimers = new Set();
+      function safeTimeout(cb, ms) {
+        const rec = { cb, remaining: ms, startedAt: performance.now(), id: 0, cancelled: false };
+        rec.id = setTimeout(function fire() {
+          _safeTimers.delete(rec);
+          if (!rec.cancelled) cb();
+        }, ms);
+        _safeTimers.add(rec);
+        return rec;
+      }
+      function cancelSafeTimeout(rec) {
+        if (!rec) return;
+        rec.cancelled = true;
+        clearTimeout(rec.id);
+        _safeTimers.delete(rec);
+      }
+      function pauseAllTimers() {
+        const now = performance.now();
+        for (const rec of _safeTimers) {
+          const elapsed = now - rec.startedAt;
+          rec.remaining = Math.max(0, rec.remaining - elapsed);
+          clearTimeout(rec.id);
+          rec.id = 0;
+        }
+      }
+      function resumeAllTimers() {
+        const now = performance.now();
+        for (const rec of _safeTimers) {
+          rec.startedAt = now;
+          rec.id = setTimeout(function fire() {
+            _safeTimers.delete(rec);
+            if (!rec.cancelled) rec.cb();
+          }, rec.remaining);
+        }
+      }
+      $("pm-resume").addEventListener("click", resumeGame);
+      $("pm-restart").addEventListener("click", () => {
+        const curBlockAll = RES.trials.filter((t) => t.block === RES.block);
+        const prevBlockRows = RES.trials.length - curBlockAll.length;
+        let msg;
+        if (prevBlockRows > 0) {
+          msg = `Restart block ${RES.block} only? This will discard ${curBlockAll.length} row(s) from the current block (warm-up + scored).\n\n${prevBlockRows} row(s) from earlier blocks will be KEPT.`;
+        } else if (curBlockAll.length > 0) {
+          msg = `Restart will discard ${curBlockAll.length} row(s) from this block (warm-up + scored).`;
+        } else {
+          msg = null;
+        }
+        if (msg && !confirm(msg)) return;
+        RES.trials = RES.trials.filter((t) => t.block !== RES.block);
+        RES.exported = false;
+        PMENU.classList.remove("show");
+        CR.classList.remove("show");
+        if (G.phase === "paused") resumeGame();
+        fdOut(() => G.start(), 360);
+      });
+      $("pm-tutorial").addEventListener("click", () => {
+        PMENU.classList.remove("show");
+        showTutorial(false);
+        tutFromPause = true;
+      });
+      $("pm-export").addEventListener("click", () => RES.exportXLSX());
+      $("pm-savenext").addEventListener("click", () => {
+        if (!RES.trials.length) {
+          if (!confirm("No data to export. Reset anyway?")) return;
+        } else {
+          RES.exportXLSX();
+          if (!RES.exported) {
+            alert("Export failed. Not resetting.");
+            return;
+          }
+        }
+        RES.pid = "";
+        RES.sid = "";
+        $("tt-pid").value = "";
+        $("tt-sid").value = "";
+        $("pid").value = "";
+        RES.trials = [];
+        RES.exported = false;
+        RES.block = 1;
+        toTitle();
+      });
+      $("pm-access").addEventListener("click", () => {
+        ACCSUB.classList.add("show");
+      });
+      $("acc-back").addEventListener("click", () => {
+        ACCSUB.classList.remove("show");
+      });
+      $("pm-title").addEventListener("click", () => {
+        if (RES.trials.length && !RES.exported) {
+          if (
+            !confirm(
+              "Unexported data will clear if you leave. Cancel to export first; OK to discard.",
+            )
+          )
+            return;
+          discardSessionTrials();
+        }
+        toTitle();
+      });
+
+      function toTitle() {
+        CR.classList.remove("show");
+        PMENU.classList.remove("show");
+        RBAR.classList.remove("show");
+        alive = false;
+        G.phase = "title";
+        clearBullets();
+        for (let i = FX_PARTICLES.length - 1; i >= 0; i--) {
+          scene.remove(FX_PARTICLES[i].mesh);
+          FX_PARTICLES[i].mat.dispose();
+        }
+        FX_PARTICLES.length = 0;
+        combo = 0;
+        bestCombo = 0;
+        updateComboHUD();
+        if (worldGrp) {
+          disposeGrp(worldGrp);
+          scene.remove(worldGrp);
+          worldGrp = null;
+        }
+        TORCH_LIGHTS.forEach((l) => (l.visible = false));
+        G.W = null;
+        G.seq = [];
+        G.nextIdx = 0;
+        G.awaitingResponse = false;
+        TITLE.classList.remove("gone");
+        spawnTitleGlyphs();
+        LOCKHINT.classList.remove("show");
+        PROMPT.textContent = "";
+        STATSBAR.style.display = "none";
+        gunGroup.visible = false;
+        TFB.className = "";
+        exitPointerLockIfAny();
+      }
+
+      let crNextN = 1,
+        crCustomN = 2;
+      function crSelectMode(n, btn) {
+        document.querySelectorAll(".cr-mode-btn").forEach((b) => b.classList.remove("on"));
+        if (btn) btn.classList.add("on");
+        $("cr-custom-wrap").style.display = n === -1 ? "flex" : "none";
+        crNextN = n === -1 ? crCustomN : n;
+      }
+      function crSyncToCurrentN() {
+        if (G.N === 1) {
+          crSelectMode(1, $("cr-mode-1"));
+        } else if (G.N === 3) {
+          crSelectMode(3, $("cr-mode-3"));
+        } else {
+          crCustomN = G.N;
+          $("cr-nval").textContent = crCustomN;
+          crSelectMode(-1, $("cr-mode-custom"));
+        }
+      }
+      $("cr-mode-1").addEventListener("click", function () {
+        crSelectMode(1, this);
+      });
+      $("cr-mode-3").addEventListener("click", function () {
+        crSelectMode(3, this);
+      });
+      $("cr-mode-custom").addEventListener("click", function () {
+        crSelectMode(-1, this);
+      });
+      $("cr-nminus").addEventListener("click", () => {
+        crCustomN = Math.max(1, crCustomN - 1);
+        $("cr-nval").textContent = crCustomN;
+        if ($("cr-mode-custom").classList.contains("on")) crNextN = crCustomN;
+      });
+      $("cr-nplus").addEventListener("click", () => {
+        crCustomN = Math.min(12, crCustomN + 1);
+        $("cr-nval").textContent = crCustomN;
+        if ($("cr-mode-custom").classList.contains("on")) crNextN = crCustomN;
+      });
+
+      $("cr-again").addEventListener("click", () => {
+        CR.classList.remove("show");
+        G.N = crNextN;
+        RES.nextBlock();
+        fdOut(() => G.start(), 360);
+      });
+      $("cr-menu").addEventListener("click", () => {
+        if (RES.trials.length && !RES.exported) {
+          if (
+            !confirm(
+              "Unexported data will clear if you leave. Cancel to export first; OK to discard.",
+            )
+          )
+            return;
+          discardSessionTrials();
+        }
+        toTitle();
+      });
+      $("cr-export").addEventListener("click", () => RES.exportXLSX());
+      $("cr-savenext").addEventListener("click", () => {
+        if (!RES.trials.length) {
+          if (!confirm("No data to export. Reset anyway?")) return;
+        } else {
+          RES.exportXLSX();
+          if (!RES.exported) {
+            alert("Export failed. Not resetting.");
+            return;
+          }
+        }
+        RES.pid = "";
+        RES.sid = "";
+        $("tt-pid").value = "";
+        $("tt-sid").value = "";
+        $("pid").value = "";
+        RES.trials = [];
+        RES.exported = false;
+        RES.block = 1;
+        CR.classList.remove("show");
+        toTitle();
+      });
+
+      function hudUpdate() {
+        NLEVEL.textContent = `N-BACK: ${G.N}`;
+        BESTLV.textContent = `TRIAL ${G.respondedCount}/${TOTAL_TRIALS}`;
+        if (!G.seq.length) {
+          SEQBOX.innerHTML = "";
+          return;
+        }
+        const seen = G.nextIdx;
+        const totalPaintings = G.seq.length;
+        const tail = G.seq.slice(Math.max(0, seen - 5), seen);
+        const dots = tail.map((gi) => (ACC.labels ? GLYPHS[gi].id : "\u25CF")).join(" ");
+        let h = `<div style="font-size:.72em;color:rgba(128,92,24,.52);letter-spacing:.12em;margin-bottom:2px">PAINTING ${seen}/${totalPaintings}</div>`;
+        h += `<div style="font-size:.9em;color:rgba(200,150,54,.88)">${dots || "\u2014"}</div>`;
+        if (G.phase === "corridor" && G.awaitingResponse && G.currentTrialIdx >= G.N) {
+          h += `<div style="margin-top:5px;font-size:.72em;color:rgba(155,110,38,.62)">COMPARE TO <b style="color:rgba(245,180,60,.9)">${G.N}</b> BACK</div>`;
+          h += `<div style="margin-top:2px;font-size:.68em;color:rgba(155,110,38,.48)">${G.N}-BACK WAS: <b>${ACC.labels ? GLYPHS[G.seq[seen - 1 - G.N]].id : "?"}</b></div>`;
+        }
+        const curBlockTrials = RES.trials.filter(
+          (t) => t.block === RES.block && t.trialType !== "warmup",
+        ).length;
+        if (curBlockTrials) {
+          h += `<div style="margin-top:5px;font-size:.68em;color:rgba(138,98,30,.72)">ACC ${RES.accuracy(RES.block)}% RT ${RES.meanRT(RES.block) || "--"}ms</div>`;
+        }
+        SEQBOX.innerHTML = h;
+      }
+
+      function fdOut(cb, ms = 540) {
+        FADE.style.transition = `opacity ${ms}ms ease`;
+        FADE.style.opacity = "1";
+        setTimeout(cb, ms);
+      }
+      function fdIn(ms = 600) {
+        setTimeout(() => {
+          FADE.style.transition = `opacity ${ms}ms ease`;
+          FADE.style.opacity = "0";
+        }, 30);
+      }
+
+      function showTrialFeedback(correct) {
+        TFB.textContent = correct ? "CORRECT" : "WRONG";
+        TFB.className = correct ? "ok" : "no";
+        setTimeout(
+          () => {
+            TFB.className = "";
+          },
+          correct ? 350 : 500,
+        );
+        if (!correct) {
+          const cls = combo >= 5 ? "shake-lg" : "shake-sm";
+          C3D.classList.add(cls);
+          setTimeout(() => C3D.classList.remove(cls), cls === "shake-lg" ? 400 : 250);
+        }
+        spawnFXParticles(correct);
+      }
+
+      let combo = 0,
+        bestCombo = 0;
+      const COMBO_EL = $("combo"),
+        COMBO_VAL = $("combo-val");
+
+      const G = {
+        phase: "title",
+        N: 1,
+        seq: [],
+        W: null,
+        _prev: "corridor",
+        nextIdx: 0,
+        awaitingResponse: false,
+        currentTrialIdx: -1,
+        respondedCount: 0,
+        blockComplete: false,
+        lastEventTime: 0,
+
+        start() {
+          this.phase = "busy";
+          this.nextIdx = 0;
+          this.awaitingResponse = false;
+          this.currentTrialIdx = -1;
+          this.respondedCount = 0;
+          this.blockComplete = false;
+          this.lastEventTime = 0;
+          combo = 0;
+          bestCombo = 0;
+          updateComboHUD();
+          clearBullets();
+          for (let i = FX_PARTICLES.length - 1; i >= 0; i--) {
+            scene.remove(FX_PARTICLES[i].mesh);
+            FX_PARTICLES[i].mat.dispose();
+          }
+          FX_PARTICLES.length = 0;
+          if (this.W && this.W.panels) {
+            this.W.panels.forEach((p) => {
+              if (p.glowTimer) cancelSafeTimeout(p.glowTimer);
+            });
+          }
+          AMBIENT.intensity = 1.65;
+          this.seq = genSeq70(this.N);
+          this.W = buildLevel(this.seq);
+          cam.position.set(0, EYE_HEIGHT, 3.5);
+          euler.set(0, 0, 0);
+          cam.quaternion.setFromEuler(euler);
+          gunGroup.visible = true;
+          XRING.classList.add("aim");
+          if (isTouch) {
+            TJOY.style.display = "";
+            TPAUSE.style.display = "";
+          }
+          RBAR.classList.remove("show");
+          hudUpdate();
+          fdIn(580);
+          setTimeout(() => {
+            this.phase = "corridor";
+            PROMPT.textContent = "PROCEED IN ORDER";
+            if (!isTouch) LOCKHINT.classList.add("show");
+          }, 660);
+        },
+
+        revealPanel(p) {
+          if (p.revealed || this.blockComplete) return;
+          p.revealed = true;
+          p.revealTime = performance.now();
+          // ms from lastEventTime to this onset: prior response (scored chain) or prior onset (warm-ups / first scored)
+          p.rsi = this.lastEventTime > 0 ? p.revealTime - this.lastEventTime : 0;
+          SFX.panel();
+          if (GMAT) p.mesh.material = GMAT[p.gi];
+          if (p.glowTimer) cancelSafeTimeout(p.glowTimer);
+          const glowDur = ACC.longglow ? 5000 : 2000;
+          p.glowTimer = safeTimeout(() => {
+            if (p.mesh && PMAT) p.mesh.material = PMAT[p.gi];
+          }, glowDur);
+
+          this.nextIdx = p.idx + 1;
+
+          const i = p.idx;
+          if (i < this.N) {
+            this.awaitingResponse = false;
+            this.currentTrialIdx = -1;
+            RBAR.classList.remove("show");
+            PROMPT.textContent =
+              i === 0
+                ? "OBSERVE / REMEMBER THIS GLYPH"
+                : `OBSERVE / WARM-UP ${i + 1}/${this.N} (NO RESPONSE)`;
+            p.responded = true;
+            this.lastEventTime = p.revealTime;
+            RES.recordWarmup({
+              trialIdx: i,
+              n: this.N,
+              glyphIdx: this.seq[i],
+              rsi: p.rsi || 0,
+            });
+            RES.updateBar();
+            hudUpdate();
+          } else {
+            this.awaitingResponse = true;
+            this.currentTrialIdx = p.idx;
+            RBAR.classList.add("show");
+            LOCKHINT.classList.remove("show");
+            PROMPT.textContent = `TRIAL ${this.respondedCount + 1}/${TOTAL_TRIALS} · F MATCH · J NO MATCH`;
+            hudUpdate();
+          }
+        },
+
+        respond(resp) {
+          if (!this.awaitingResponse || this.currentTrialIdx < 0) return;
+          const respTime = performance.now();
+          const i = this.currentTrialIdx;
+          const panel = this.W.panels[i];
+          const rt = respTime - panel.revealTime;
+          const rsi = panel.rsi || 0;
+
+          const currentGlyph = this.seq[i];
+          const hasNback = i >= this.N;
+          const nbackGlyph = hasNback ? this.seq[i - this.N] : -1;
+          const actualMatch = hasNback && currentGlyph === nbackGlyph;
+          const correct = (resp === 1 && actualMatch) || (resp === 2 && !actualMatch);
+
+          if (resp === 1) {
+            trigRecoil();
+            SFX.shoot();
+          } else {
+            SFX.pass();
+          }
+
+          if (correct) SFX.correct();
+          else SFX.wrong();
+          showTrialFeedback(correct);
+
+          if (correct) {
+            combo++;
+            if (combo > bestCombo) bestCombo = combo;
+          } else {
+            combo = 0;
+          }
+          updateComboHUD();
+          updateTorchBrightness(correct);
+
+          RES.record({
+            trialIdx: i,
+            n: this.N,
+            glyphIdx: currentGlyph,
+            nbackGlyphIdx: nbackGlyph,
+            resp: resp,
+            rt: rt,
+            rsi: rsi,
+          });
+          RES.updateBar();
+
+          this.lastEventTime = respTime;
+
+          panel.responded = true;
+          this.awaitingResponse = false;
+          this.currentTrialIdx = -1;
+          this.respondedCount++;
+          RBAR.classList.remove("show");
+          if (!isTouch && !pointerLocked) LOCKHINT.classList.add("show");
+
+          if (this.respondedCount >= TOTAL_TRIALS) {
+            PROMPT.textContent = "BLOCK COMPLETE";
+            safeTimeout(() => this.endBlock(), 800);
+          } else {
+            PROMPT.textContent = "NEXT PAINTING";
+          }
+          hudUpdate();
+        },
+
+        endBlock() {
+          this.blockComplete = true;
+          this.phase = "results";
+          clearBullets();
+          RBAR.classList.remove("show");
+          gunGroup.visible = false;
+          XRING.classList.remove("aim");
+          exitPointerLockIfAny();
+
+          $("cr-title").textContent = "BLOCK COMPLETE";
+          $("cr-title").style.color = "rgba(245,192,82,.96)";
+          const b = RES.block;
+          $("cr-sub").textContent = `Block ${b} · N=${this.N} · 70 scored (${this.N} warm-up)`;
+
+          const stats = $("cr-stats");
+          stats.innerHTML = "";
+          const add = (val, lbl) => {
+            const d = document.createElement("div");
+            d.className = "cr-stat";
+            d.innerHTML = `<div class="cr-stat-val">${val}</div><div class="cr-stat-lbl">${lbl}</div>`;
+            stats.appendChild(d);
+          };
+          add(RES.accuracy(b) + "%", "ACCURACY");
+          add(RES.meanRT(b) + "ms", "MEAN RT");
+          add(RES.hits(b), "HITS");
+          add(RES.misses(b), "MISSES");
+          add(RES.falseAlarms(b), "FALSE ALARMS");
+          add(RES.correctRejections(b), "CORRECT REJ");
+          add(bestCombo + "x", "BEST STREAK");
+
+          CRBODY.innerHTML =
+            `Export downloads <b>Trials</b> (row-level: use <b>trialType</b> warmup vs scored; <b>trial</b> 1–70 on scored only) and <b>Meta</b> (session timers, design constants).`;
+
+          spawnResultParticles();
+          CR.classList.add("show");
+          PROMPT.textContent = "";
+          crSyncToCurrentN();
+        },
+      };
+
+      const SLIDES = [
+        {
+          anim: "idle",
+          text: "Walk the corridor: each painting reveals one glyph when you are close.<br><br>Take the time you need to read them.",
+        },
+        {
+          anim: "point",
+          text:
+            "<b>Task</b>: spatial N-back. First <b>N</b> paintings are <b>warm-up</b> (watch only). Then <b>70</b> scored trials: does this glyph match the one from <b>N paintings back</b>?<br><br>Design: <b>30</b> targets / <b>40</b> non-targets per block. The next painting stays closed until you respond on scored trials.",
+        },
+        {
+          anim: "idle",
+          text:
+            "<b>Input</b>: WASD move · Shift sprint · Mouse look (click locks cursor)<br><b>MATCH</b>: F, space, or left click · <b>NO MATCH</b>: J or right click · <b>Esc</b> Pause<br><br><b>Data</b>: confirm Participant ID and Session on the title screen; export from Pause or when the block ends (spreadsheet: Trials + Meta sheets).",
+        },
+        {
+          anim: "bow",
+          text: "When you are done, use <b>Export Data</b>. Ready when you are.",
+        },
+      ];
+      let tutPage = 0,
+        tutFromTitle = false,
+        tutFromPause = false;
+      function showTutorial(fromTitle) {
+        tutFromTitle = fromTitle;
+        tutFromPause = false;
+        tutPage = 0;
+        renderSlide();
+        TUT.classList.add("show");
+        drawNPC("idle");
+      }
+      function hideTutorial() {
+        TUT.classList.remove("show");
+      }
+      function afterTutorialFromPauseIfNeeded() {
+        if (!tutFromPause) return;
+        tutFromPause = false;
+        if (G.phase === "paused") resumeGame();
+      }
+      TUT_PREV.addEventListener("click", () => {
+        if (tutPage > 0) {
+          tutPage--;
+          renderSlide();
+        }
+      });
+      TUT_NEXT.addEventListener("click", () => {
+        if (tutPage < SLIDES.length - 1) {
+          tutPage++;
+          renderSlide();
+        } else {
+          hideTutorial();
+          if (tutFromTitle) startGameDirect();
+          else afterTutorialFromPauseIfNeeded();
+        }
+      });
+      TUT_SKIP.addEventListener("click", () => {
+        hideTutorial();
+        if (tutFromTitle) startGameDirect();
+        else afterTutorialFromPauseIfNeeded();
+      });
+
+      function renderSlide() {
+        let txt = SLIDES[tutPage].text;
+        if (isTouch && tutPage === 2) {
+          txt =
+            "<b>Touch</b>: joystick moves · drag right side to look · on-screen MATCH / NO MATCH · Pause top<br><br><b>Data</b>: same export as desktop (Trials + Meta).";
+        }
+        TUT_TXT.innerHTML = txt;
+        TUT_PREV.disabled = tutPage === 0;
+        const last = tutPage === SLIDES.length - 1;
+        TUT_NEXT.textContent = last ? (tutFromTitle ? "BEGIN \u2192" : "CLOSE") : "NEXT \u2192";
+        TUT_DOTS.innerHTML = "";
+        for (let i = 0; i < SLIDES.length; i++) {
+          const d = document.createElement("div");
+          d.className = "tut-dot" + (i === tutPage ? " on" : "");
+          TUT_DOTS.appendChild(d);
+        }
+        drawNPC(SLIDES[tutPage].anim);
+      }
+
+      function drawNPC(pose) {
+        const cv = $("npc-cv");
+        if (!cv) return;
+        const ctx = cv.getContext("2d");
+        ctx.clearRect(0, 0, 160, 260);
+        const skin = "#c8924a",
+          dark = "#6b3a12",
+          kilt = "rgba(240,228,180,.92)",
+          collar = "#c8922a",
+          gold = "#f5c040",
+          eye = "#2a1a06";
+        let headTilt = 0,
+          armRaise = 0,
+          bodyLean = 0;
+        if (pose === "point") {
+          armRaise = -30;
+          bodyLean = 4;
+        }
+        if (pose === "think") {
+          headTilt = 8;
+        }
+        if (pose === "gesture") {
+          armRaise = -18;
+          bodyLean = -3;
+        }
+        if (pose === "bow") {
+          headTilt = 22;
+          bodyLean = 10;
+        }
+        const cx = 80 + bodyLean;
+        ctx.fillStyle = skin;
+        ctx.beginPath();
+        ctx.moveTo(cx - 14, 190);
+        ctx.lineTo(cx - 4, 190);
+        ctx.lineTo(cx - 4, 248);
+        ctx.lineTo(cx - 16, 248);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(cx + 4, 190);
+        ctx.lineTo(cx + 14, 190);
+        ctx.lineTo(cx + 16, 248);
+        ctx.lineTo(cx + 4, 248);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = dark;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cx - 18, 247);
+        ctx.lineTo(cx - 12, 250);
+        ctx.lineTo(cx - 4, 247);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx + 4, 247);
+        ctx.lineTo(cx + 13, 250);
+        ctx.lineTo(cx + 18, 247);
+        ctx.stroke();
+        ctx.fillStyle = kilt;
+        ctx.beginPath();
+        ctx.moveTo(cx - 18, 140);
+        ctx.lineTo(cx + 18, 140);
+        ctx.lineTo(cx + 20, 194);
+        ctx.lineTo(cx - 20, 194);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = skin;
+        ctx.beginPath();
+        ctx.moveTo(cx - 18, 90);
+        ctx.lineTo(cx + 18, 90);
+        ctx.lineTo(cx + 16, 142);
+        ctx.lineTo(cx - 16, 142);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = collar;
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        ctx.arc(cx, 100, 17, Math.PI * 0.1, Math.PI * 0.9);
+        ctx.stroke();
+        ctx.strokeStyle = gold;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, 100, 17, Math.PI * 0.1, Math.PI * 0.9);
+        ctx.stroke();
+        ctx.fillStyle = gold;
+        for (let b = 0; b < 7; b++) {
+          const ba = Math.PI * 0.1 + b * ((Math.PI * 0.8) / 6);
+          ctx.beginPath();
+          ctx.arc(cx + Math.cos(ba) * 17, 100 + Math.sin(ba) * 17, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.save();
+        ctx.translate(cx + 18, 108);
+        ctx.rotate((armRaise * Math.PI) / 180);
+        ctx.fillStyle = skin;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 8, 28, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(4, 46, 6, 22, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(6, 68, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        ctx.save();
+        ctx.translate(cx + 28, 108);
+        ctx.rotate((-armRaise * 0.6 * Math.PI) / 180);
+        ctx.strokeStyle = dark;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(0, -80);
+        ctx.lineTo(0, 140);
+        ctx.stroke();
+        ctx.strokeStyle = gold;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, -80);
+        ctx.quadraticCurveTo(-12, -100, -8, -118);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(0, -60, 4, 0, Math.PI * 2);
+        ctx.strokeStyle = gold;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+        ctx.save();
+        ctx.translate(cx - 18, 108);
+        ctx.rotate((8 * Math.PI) / 180);
+        ctx.fillStyle = skin;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 7, 26, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(-3, 44, 5, 20, -0.15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(-4, 64, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        ctx.fillStyle = skin;
+        ctx.beginPath();
+        ctx.ellipse(cx, 84, 9, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.save();
+        ctx.translate(cx, 62);
+        ctx.rotate((headTilt * Math.PI) / 180);
+        ctx.fillStyle = skin;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 22, 28, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = eye;
+        ctx.beginPath();
+        ctx.ellipse(-9, 2, 5, 3.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(9, 2, 5, 3.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#f5e8cc";
+        ctx.beginPath();
+        ctx.ellipse(-9, 1.5, 3.5, 2.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(9, 1.5, 3.5, 2.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = eye;
+        ctx.beginPath();
+        ctx.arc(-9, 1.5, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(9, 1.5, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = dark;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(-16, 2);
+        ctx.lineTo(-4, 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(4, 2);
+        ctx.lineTo(16, 2);
+        ctx.stroke();
+        ctx.strokeStyle = dark;
+        ctx.lineWidth = 1.8;
+        if (pose === "bow" || pose === "think") {
+          ctx.beginPath();
+          ctx.moveTo(-7, 20);
+          ctx.quadraticCurveTo(0, 21, 7, 20);
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(-8, 19);
+          ctx.quadraticCurveTo(0, 24, 8, 19);
+          ctx.stroke();
+        }
+        ctx.strokeStyle = gold;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(-20, -8);
+        ctx.lineTo(20, -8);
+        ctx.stroke();
+        ctx.fillStyle = gold;
+        ctx.beginPath();
+        ctx.ellipse(0, -18, 6, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = skin;
+        ctx.beginPath();
+        ctx.ellipse(-22, 5, 5, 8, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = gold;
+        ctx.beginPath();
+        ctx.arc(-24, 8, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      let lastT = 0;
+      const REVEAL_DIST = 4.8;
+
+      function loop(t) {
+        requestAnimationFrame(loop);
+        const dt = Math.min((t - lastT) * 0.001, 0.05);
+        lastT = t;
+        const W = G.W;
+        if (G.phase === "corridor" && W) {
+          moveCam(dt, W.cBound);
+          if (!G.awaitingResponse && !G.blockComplete) {
+            const i = G.nextIdx;
+            if (i < W.panels.length) {
+              const p = W.panels[i];
+              if (!p.revealed && Math.abs(cam.position.z - p.z) < REVEAL_DIST) {
+                G.revealPanel(p);
+              }
+            }
+          }
+        }
+        updateBullets(dt);
+        updateFXParticles(dt);
+        drawGun(t);
+        renderer.render(scene, cam);
+      }
+
+      function spawnTitleGlyphs() {
+        const container = $("tt-glyphs");
+        if (!container) return;
+        container.innerHTML = "";
+        for (let i = 0; i < 14; i++) {
+          const el = document.createElement("div");
+          el.className = "tt-glyph";
+          el.textContent = GLYPHS[~~(Math.random() * N_GLYPHS)].ch;
+          el.style.left = Math.random() * 95 + "%";
+          el.style.fontSize = clamp(18, Math.random() * 48 + 18, 60) + "px";
+          el.style.animationDuration = 12 + Math.random() * 14 + "s";
+          el.style.animationDelay = -Math.random() * 18 + "s";
+          el.style.opacity = 0.06 + Math.random() * 0.08;
+          container.appendChild(el);
+        }
+      }
+      function clamp(mn, v, mx) {
+        return Math.max(mn, Math.min(mx, v));
+      }
+
+      function spawnResultParticles() {
+        const container = $("cr-particles");
+        if (!container) return;
+        container.innerHTML = "";
+        const colors = ["#f5c040", "#ff8c22", "#2edc5a", "#f5e880"];
+        for (let i = 0; i < 30; i++) {
+          const p = document.createElement("div");
+          p.className = "cr-particle";
+          p.style.left = Math.random() * 100 + "%";
+          p.style.bottom = Math.random() * 30 + "%";
+          p.style.width = p.style.height = 3 + Math.random() * 5 + "px";
+          p.style.background = colors[~~(Math.random() * colors.length)];
+          p.style.animationDelay = Math.random() * 1.8 + "s";
+          p.style.animationDuration = 1.5 + Math.random() * 2 + "s";
+          container.appendChild(p);
+        }
+      }
+
+      function updateComboHUD() {
+        if (combo < 2) {
+          COMBO_EL.className = "";
+          COMBO_VAL.textContent = "";
+          return;
+        }
+        COMBO_VAL.textContent = combo + "x";
+        if (combo >= 10) COMBO_EL.className = "blaze";
+        else if (combo >= 5) COMBO_EL.className = "fire";
+        else COMBO_EL.className = "hot";
+        COMBO_EL.style.transform = "scale(1.2)";
+        setTimeout(() => {
+          COMBO_EL.style.transform = "";
+        }, 150);
+      }
+
+      function updateTorchBrightness(correct) {
+        const baseBright = 3.95;
+        if (correct) {
+          const surge = Math.min(combo * 0.6, 5);
+          TORCH_LIGHTS.forEach((l) => {
+            if (!l.visible) return;
+            l.intensity = baseBright + surge;
+            l.color.setHex(combo >= 8 ? 0xffcc44 : combo >= 4 ? 0xffaa38 : 0xff9a38);
+          });
+          AMBIENT.intensity = 1.65 + Math.min(combo * 0.08, 0.6);
+          safeTimeout(() => {
+            TORCH_LIGHTS.forEach((l) => {
+              if (l.visible) l.intensity = baseBright + Math.min(combo * 0.3, 2);
+            });
+          }, 600);
+        } else {
+          TORCH_LIGHTS.forEach((l) => {
+            if (!l.visible) return;
+            l.intensity = 1.2;
+            l.color.setHex(0xcc5500);
+          });
+          AMBIENT.intensity = 0.9;
+          safeTimeout(() => {
+            TORCH_LIGHTS.forEach((l) => {
+              if (l.visible) {
+                l.intensity = baseBright;
+                l.color.setHex(0xff9a38);
+              }
+            });
+            AMBIENT.intensity = 1.65;
+          }, 1500);
+        }
+      }
+
+      const FX_PARTICLES = [];
+      const fxGeo = new THREE.SphereGeometry(0.04, 4, 3);
+
+      function spawnFXParticles(correct) {
+        const count = correct ? 12 + Math.min(combo * 2, 20) : 8;
+        const baseColor = correct ? 0xf5c040 : 0xcc3310;
+        const pos = cam.position.clone();
+        const fwd = new THREE.Vector3();
+        cam.getWorldDirection(fwd);
+        pos.add(fwd.multiplyScalar(1.5));
+
+        for (let i = 0; i < count; i++) {
+          const color = correct
+            ? new THREE.Color().setHSL(0.08 + Math.random() * 0.08, 0.9, 0.5 + Math.random() * 0.3)
+            : new THREE.Color().setHSL(0.02 + Math.random() * 0.03, 0.8, 0.3 + Math.random() * 0.2);
+          const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1 });
+          const m = new THREE.Mesh(fxGeo, mat);
+          m.position.copy(pos);
+          m.position.x += (Math.random() - 0.5) * 1.5;
+          m.position.y += (Math.random() - 0.5) * 1.2;
+          m.position.z += (Math.random() - 0.5) * 1.5;
+          const scale = 0.5 + Math.random() * 0.8;
+          m.scale.setScalar(scale);
+          scene.add(m);
+          FX_PARTICLES.push({
+            mesh: m,
+            mat,
+            life: 1.0,
+            vx: (Math.random() - 0.5) * 3,
+            vy: 1.5 + Math.random() * 3,
+            vz: (Math.random() - 0.5) * 3,
+            gravity: correct ? -2.5 : -6,
+            drag: 0.97,
+          });
+        }
+      }
+
+      function updateFXParticles(dt) {
+        for (let i = FX_PARTICLES.length - 1; i >= 0; i--) {
+          const p = FX_PARTICLES[i];
+          p.life -= dt * (1.2 + Math.random() * 0.3);
+          p.vy += p.gravity * dt;
+          p.vx *= p.drag;
+          p.vy *= p.drag;
+          p.vz *= p.drag;
+          p.mesh.position.x += p.vx * dt;
+          p.mesh.position.y += p.vy * dt;
+          p.mesh.position.z += p.vz * dt;
+          p.mat.opacity = Math.max(0, p.life);
+          p.mesh.scale.setScalar(p.mesh.scale.x * (0.98 + p.life * 0.02));
+          if (p.life <= 0) {
+            scene.remove(p.mesh);
+            p.mat.dispose();
+            FX_PARTICLES.splice(i, 1);
+          }
+        }
+      }
+
+      const CS = $("cutscene");
+      const CS_TERM = $("cs-terminal");
+      const CS_KHENU = $("cs-khenu");
+      const CS_TEXT = $("cs-text");
+      const CS_PROG = $("cs-progress");
+      const CS_GLITCH = $("cs-glitch");
+      let csActive = false,
+        csResolve = null,
+        csTimers = [],
+        csPhase = 0,
+        csMusicNodes = [];
+
+      function startCsMusic() {
+        if (!audioCtx) return;
+        const ac = audioCtx;
+        const now = ac.currentTime;
+
+        const master = ac.createGain();
+        master.gain.setValueAtTime(0, now);
+        master.gain.linearRampToValueAtTime(0.9, now + 3.2);
+        master.connect(ac.destination);
+
+        // Simple immersive space: feedback delay + diffusion-ish LP in loop
+        const revDelay = ac.createDelay(2.5);
+        revDelay.delayTime.value = 0.52;
+        const revFb = ac.createGain();
+        revFb.gain.value = 0.41;
+        const revTone = ac.createBiquadFilter();
+        revTone.type = "lowpass";
+        revTone.frequency.value = 2200;
+        revTone.Q.value = 0.5;
+        const revWet = ac.createGain();
+        revWet.gain.value = 0.34;
+        revDelay.connect(revTone);
+        revTone.connect(revFb);
+        revFb.connect(revDelay);
+        revDelay.connect(revWet);
+        revWet.connect(master);
+
+        const dryBus = ac.createGain();
+        dryBus.gain.value = 1;
+        dryBus.connect(master);
+
+        const revSend = ac.createGain();
+        revSend.gain.value = 0.62;
+        revSend.connect(revDelay);
+
+        function pushSustain(o, g) {
+          o.start(now);
+          csMusicNodes.push({ o, g });
+        }
+
+        function layerDrone(type, freq, detuneCents, peak, cutoffHz, panVal) {
+          const o = ac.createOscillator();
+          o.type = type;
+          o.frequency.value = freq;
+          o.detune.value = detuneCents;
+          const lp = ac.createBiquadFilter();
+          lp.type = "lowpass";
+          lp.frequency.value = cutoffHz;
+          lp.Q.value = 1.05;
+          const g = ac.createGain();
+          g.gain.setValueAtTime(0, now);
+          g.gain.linearRampToValueAtTime(peak, now + 2.8 + Math.random() * 0.35);
+          const pan = ac.createStereoPanner();
+          pan.pan.value = panVal;
+          const toRev = ac.createGain();
+          toRev.gain.value = 0.38;
+          o.connect(lp);
+          lp.connect(g);
+          g.connect(pan);
+          pan.connect(dryBus);
+          pan.connect(toRev);
+          toRev.connect(revSend);
+          pushSustain(o, g);
+          return { o, lp };
+        }
+
+        // D2 drone stack + gentle Fifth (roughly A2) for Egyptian-ish color
+        const main = layerDrone("sawtooth", 73.42, -7, 0.052, 410, -0.72);
+        layerDrone("sawtooth", 73.42, 9, 0.046, 360, 0.74);
+        layerDrone("triangle", 110.0, -4, 0.022, 680, 0.15);
+
+        // Slow breathing on the main lowpass (immersive movement)
+        const breath = ac.createOscillator();
+        breath.type = "sine";
+        breath.frequency.value = 0.045;
+        const breathAmt = ac.createGain();
+        breathAmt.gain.value = 95;
+        breath.connect(breathAmt);
+        breathAmt.connect(main.lp.frequency);
+        breath.start(now);
+        csMusicNodes.push({ o: breath, g: breathAmt });
+
+        // Sub foundation + subtle upper body
+        const sub = ac.createOscillator();
+        sub.type = "sine";
+        sub.frequency.value = 36.71;
+        const subG = ac.createGain();
+        subG.gain.setValueAtTime(0, now);
+        subG.gain.linearRampToValueAtTime(0.095, now + 3.5);
+        const subPan = ac.createStereoPanner();
+        subPan.pan.value = 0;
+        const subSend = ac.createGain();
+        subSend.gain.value = 0.45;
+        sub.connect(subG);
+        subG.connect(subPan);
+        subPan.connect(dryBus);
+        subPan.connect(subSend);
+        subSend.connect(revSend);
+        pushSustain(sub, subG);
+
+        const sub2 = ac.createOscillator();
+        sub2.type = "sine";
+        sub2.frequency.value = 55.0;
+        const sub2G = ac.createGain();
+        sub2G.gain.setValueAtTime(0, now);
+        sub2G.gain.linearRampToValueAtTime(0.038, now + 4);
+        sub2.connect(sub2G);
+        sub2G.connect(dryBus);
+        pushSustain(sub2, sub2G);
+
+        csMusicNodes.push({ o: null, g: master, isMaster: true });
+
+        const drumPattern = [0, 0.78, 1.18, 1.62, 2.38, 3.14, 3.58, 4.02, 4.76, 5.48, 5.92, 6.38, 7.08];
+        const hatPattern = [0.4, 1.1, 2.0, 2.85, 3.45, 4.25, 5.05, 5.75, 6.55, 7.35];
+
+        function scheduleKick(time, vel) {
+          const kOsc = ac.createOscillator();
+          kOsc.type = "sine";
+          kOsc.frequency.setValueAtTime(118, time);
+          kOsc.frequency.exponentialRampToValueAtTime(32, time + 0.16);
+          const kG = ac.createGain();
+          kG.gain.setValueAtTime(vel * 0.52, time);
+          kG.gain.exponentialRampToValueAtTime(0.001, time + 0.42);
+          const kDry = ac.createGain();
+          kDry.gain.value = 1;
+          const kRv = ac.createGain();
+          kRv.gain.value = 0.35;
+          kOsc.connect(kG);
+          kG.connect(kDry);
+          kG.connect(kRv);
+          kDry.connect(dryBus);
+          kRv.connect(revSend);
+          kOsc.start(time);
+          kOsc.stop(time + 0.45);
+        }
+
+        const hatNoiseDur = 0.06;
+        const hatBuf = ac.createBuffer(1, Math.ceil(ac.sampleRate * hatNoiseDur), ac.sampleRate);
+        const hatData = hatBuf.getChannelData(0);
+        for (let i = 0; i < hatData.length; i++) hatData[i] = (Math.random() * 2 - 1) * (1 - i / hatData.length);
+
+        function scheduleHat(time, vel) {
+          const src = ac.createBufferSource();
+          src.buffer = hatBuf;
+          const bp = ac.createBiquadFilter();
+          bp.type = "bandpass";
+          bp.frequency.value = 7200;
+          bp.Q.value = 0.85;
+          const hG = ac.createGain();
+          hG.gain.setValueAtTime(vel * 0.09, time);
+          hG.gain.exponentialRampToValueAtTime(0.001, time + 0.07);
+          src.connect(bp);
+          bp.connect(hG);
+          hG.connect(dryBus);
+          hG.connect(revSend);
+          src.start(time);
+          src.stop(time + hatNoiseDur + 0.02);
+        }
+
+        for (let rep = 0; rep < 6; rep++) {
+          drumPattern.forEach((t) => {
+            const time = now + 1.8 + t + rep * 8;
+            if (time > now + 52) return;
+            scheduleKick(time, 0.14 + rep * 0.012);
+          });
+          hatPattern.forEach((t) => {
+            const time = now + 2.1 + t + rep * 8;
+            if (time > now + 52) return;
+            scheduleHat(time, 0.65 + rep * 0.05);
+          });
+        }
+
+        // Phrygian dominant-ish melody: twin detuned sine (warmth) + longer tails into space
+        const scale = [293.7, 311.1, 370.0, 392.0, 440.0, 466.2, 554.4, 587.3];
+        const melody = [0, 4, 3, 1, 0, 5, 4, 3, 1, 7, 5, 4, 3, 0];
+        melody.forEach((n, i) => {
+          const time = now + 6 + i * 1.28;
+          if (time > now + 52) return;
+          const f = scale[n];
+          const voices = [
+            { dt: -5, peak: 0.038 },
+            { dt: 6, peak: 0.032 },
+          ];
+          voices.forEach(({ dt, peak }) => {
+            const mO = ac.createOscillator();
+            mO.type = "sine";
+            mO.frequency.value = f;
+            mO.detune.value = dt;
+            const mLp = ac.createBiquadFilter();
+            mLp.type = "lowpass";
+            mLp.frequency.value = 4200;
+            const mG = ac.createGain();
+            mG.gain.setValueAtTime(0, time);
+            mG.gain.linearRampToValueAtTime(peak, time + 0.14);
+            mG.gain.exponentialRampToValueAtTime(0.001, time + 2.4);
+            const mDry = ac.createGain();
+            mDry.gain.value = 0.55;
+            const mRv = ac.createGain();
+            mRv.gain.value = 0.85;
+            mO.connect(mLp);
+            mLp.connect(mG);
+            mG.connect(mDry);
+            mG.connect(mRv);
+            mDry.connect(dryBus);
+            mRv.connect(revSend);
+            mO.start(time);
+            mO.stop(time + 2.55);
+          });
+        });
+      }
+
+      function stopCsMusic() {
+        const now = audioCtx ? audioCtx.currentTime : 0;
+        csMusicNodes.forEach((n) => {
+          try {
+            if (n.isMaster) {
+              n.g.gain.linearRampToValueAtTime(0.001, now + 1.15);
+            } else if (n.g) {
+              n.g.gain.linearRampToValueAtTime(0.001, now + 0.85);
+            }
+            if (n.o) n.o.stop(now + 1.35);
+          } catch (e) {}
+        });
+        csMusicNodes = [];
+      }
+
+      function typeLine(text, cls = "", speed = 25) {
+        return new Promise((resolve) => {
+          if (!csActive) {
+            resolve();
+            return;
+          }
+          const div = document.createElement("div");
+          div.className = "term-line " + (cls || "");
+          div.classList.add("on");
+          const cursor = document.createElement("span");
+          cursor.className = "term-cursor";
+          div.appendChild(cursor);
+          CS_TERM.appendChild(div);
+          CS_TERM.scrollTop = CS_TERM.scrollHeight;
+          let i = 0;
+          function typeChar() {
+            if (!csActive) {
+              div.textContent = text;
+              div.classList.add("on");
+              resolve();
+              return;
+            }
+            if (i < text.length) {
+              div.insertBefore(document.createTextNode(text[i]), cursor);
+              i++;
+              CS_TERM.scrollTop = CS_TERM.scrollHeight;
+              csTimers.push(setTimeout(typeChar, speed + Math.random() * speed * 0.6));
+            } else {
+              cursor.remove();
+              resolve();
+            }
+          }
+          typeChar();
+        });
+      }
+
+      function csWait(ms) {
+        return new Promise((r) => {
+          const t = setTimeout(r, ms);
+          csTimers.push(t);
+        });
+      }
+
+      function typeDialogue(html) {
+        return new Promise((resolve) => {
+          if (!csActive) {
+            resolve();
+            return;
+          }
+          CS_TEXT.innerHTML = "";
+          const tmp = document.createElement("div");
+          tmp.innerHTML = html;
+          const fullText = tmp.innerHTML;
+          CS_TEXT.innerHTML = "";
+          let i = 0,
+            adding = true;
+          const cursor = document.createElement("span");
+          cursor.className = "term-cursor";
+          cursor.style.background = "rgba(245,192,82,.7)";
+
+          function typeNext() {
+            if (!csActive || i >= fullText.length) {
+              CS_TEXT.innerHTML = fullText;
+              cursor.remove();
+              resolve();
+              return;
+            }
+            if (fullText[i] === "<") {
+              const close = fullText.indexOf(">", i);
+              if (close !== -1) {
+                i = close + 1;
+                CS_TEXT.innerHTML = fullText.slice(0, i);
+                CS_TEXT.appendChild(cursor);
+                csTimers.push(setTimeout(typeNext, 5));
+                return;
+              }
+            }
+            i++;
+            CS_TEXT.innerHTML = fullText.slice(0, i);
+            CS_TEXT.appendChild(cursor);
+            csTimers.push(setTimeout(typeNext, 28 + Math.random() * 18));
+          }
+          typeNext();
+        });
+      }
+
+      function waitForInput() {
+        return new Promise((resolve) => {
+          if (!csActive) {
+            resolve();
+            return;
+          }
+          $("cs-continue").style.display = "block";
+          function handler() {
+            if (!csActive) {
+              resolve();
+              return;
+            }
+            $("cs-continue").style.display = "none";
+            document.removeEventListener("click", handler);
+            document.removeEventListener("keydown", kHandler);
+            resolve();
+          }
+          function kHandler(e) {
+            if (e.code === "Escape") return;
+            handler();
+          }
+          document.addEventListener("click", handler);
+          document.addEventListener("keydown", kHandler);
+        });
+      }
+
+      function drawCsKhenu(pose, eyeGlow) {
+        const cv = $("cs-npc");
+        if (!cv) return;
+        const ctx = cv.getContext("2d");
+        ctx.clearRect(0, 0, 180, 280);
+        const scale = 1.1;
+        ctx.save();
+        ctx.translate(10, 10);
+        ctx.scale(scale, scale);
+        const skin = "#c8924a",
+          dark = "#6b3a12",
+          kilt = "rgba(240,228,180,.92)",
+          collar = "#c8922a",
+          gold = "#f5c040",
+          eye = "#2a1a06";
+        let headTilt = 0,
+          armRaise = 0,
+          bodyLean = 0;
+        if (pose === "point") {
+          armRaise = -30;
+          bodyLean = 4;
+        }
+        if (pose === "think") {
+          headTilt = 8;
+        }
+        if (pose === "gesture") {
+          armRaise = -18;
+          bodyLean = -3;
+        }
+        if (pose === "bow") {
+          headTilt = 22;
+          bodyLean = 10;
+        }
+        if (pose === "alert") {
+          armRaise = -15;
+          headTilt = -5;
+        }
+        const cx = 80 + bodyLean;
+        ctx.fillStyle = skin;
+        ctx.beginPath();
+        ctx.moveTo(cx - 14, 190);
+        ctx.lineTo(cx - 4, 190);
+        ctx.lineTo(cx - 4, 248);
+        ctx.lineTo(cx - 16, 248);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(cx + 4, 190);
+        ctx.lineTo(cx + 14, 190);
+        ctx.lineTo(cx + 16, 248);
+        ctx.lineTo(cx + 4, 248);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = dark;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cx - 18, 247);
+        ctx.lineTo(cx - 12, 250);
+        ctx.lineTo(cx - 4, 247);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx + 4, 247);
+        ctx.lineTo(cx + 13, 250);
+        ctx.lineTo(cx + 18, 247);
+        ctx.stroke();
+        ctx.fillStyle = kilt;
+        ctx.beginPath();
+        ctx.moveTo(cx - 18, 140);
+        ctx.lineTo(cx + 18, 140);
+        ctx.lineTo(cx + 20, 194);
+        ctx.lineTo(cx - 20, 194);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "rgba(0,0,0,.18)";
+        ctx.lineWidth = 1;
+        for (let k = -12; k <= 12; k += 6) {
+          ctx.beginPath();
+          ctx.moveTo(cx + k, 140);
+          ctx.lineTo(cx + k * 1.05, 194);
+          ctx.stroke();
+        }
+        ctx.fillStyle = skin;
+        ctx.beginPath();
+        ctx.moveTo(cx - 18, 90);
+        ctx.lineTo(cx + 18, 90);
+        ctx.lineTo(cx + 16, 142);
+        ctx.lineTo(cx - 16, 142);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = collar;
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        ctx.arc(cx, 100, 17, Math.PI * 0.1, Math.PI * 0.9);
+        ctx.stroke();
+        ctx.strokeStyle = gold;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, 100, 17, Math.PI * 0.1, Math.PI * 0.9);
+        ctx.stroke();
+        ctx.fillStyle = gold;
+        for (let b = 0; b < 7; b++) {
+          const ba = Math.PI * 0.1 + b * ((Math.PI * 0.8) / 6);
+          ctx.beginPath();
+          ctx.arc(cx + Math.cos(ba) * 17, 100 + Math.sin(ba) * 17, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.save();
+        ctx.translate(cx + 18, 108);
+        ctx.rotate((armRaise * Math.PI) / 180);
+        ctx.fillStyle = skin;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 8, 28, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(4, 46, 6, 22, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(6, 68, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        ctx.save();
+        ctx.translate(cx + 28, 108);
+        ctx.rotate((-armRaise * 0.6 * Math.PI) / 180);
+        ctx.strokeStyle = dark;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(0, -80);
+        ctx.lineTo(0, 140);
+        ctx.stroke();
+        ctx.strokeStyle = gold;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, -80);
+        ctx.quadraticCurveTo(-12, -100, -8, -118);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(0, -60, 4, 0, Math.PI * 2);
+        ctx.strokeStyle = gold;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+        ctx.save();
+        ctx.translate(cx - 18, 108);
+        ctx.rotate((8 * Math.PI) / 180);
+        ctx.fillStyle = skin;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 7, 26, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(-3, 44, 5, 20, -0.15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(-4, 64, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        ctx.fillStyle = skin;
+        ctx.beginPath();
+        ctx.ellipse(cx, 84, 9, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.save();
+        ctx.translate(cx, 62);
+        ctx.rotate((headTilt * Math.PI) / 180);
+        ctx.fillStyle = skin;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 22, 28, 0, 0, Math.PI * 2);
+        ctx.fill();
+        if (eyeGlow) {
+          ctx.save();
+          ctx.shadowBlur = 12;
+          ctx.shadowColor = "rgba(245,192,82,.8)";
+          ctx.fillStyle = "rgba(245,192,82,.9)";
+          ctx.beginPath();
+          ctx.ellipse(-9, 2, 5, 3.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.ellipse(9, 2, 5, 3.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          ctx.fillStyle = "rgba(255,220,100,1)";
+          ctx.beginPath();
+          ctx.arc(-9, 1.5, 2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(9, 1.5, 2, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillStyle = eye;
+          ctx.beginPath();
+          ctx.ellipse(-9, 2, 5, 3.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.ellipse(9, 2, 5, 3.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#f5e8cc";
+          ctx.beginPath();
+          ctx.ellipse(-9, 1.5, 3.5, 2.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.ellipse(9, 1.5, 3.5, 2.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = eye;
+          ctx.beginPath();
+          ctx.arc(-9, 1.5, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(9, 1.5, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.strokeStyle = dark;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(-16, 2);
+        ctx.lineTo(-4, 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(4, 2);
+        ctx.lineTo(16, 2);
+        ctx.stroke();
+        ctx.strokeStyle = dark;
+        ctx.lineWidth = 1.8;
+        if (pose === "bow" || pose === "think") {
+          ctx.beginPath();
+          ctx.moveTo(-7, 20);
+          ctx.quadraticCurveTo(0, 21, 7, 20);
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(-8, 19);
+          ctx.quadraticCurveTo(0, 24, 8, 19);
+          ctx.stroke();
+        }
+        ctx.strokeStyle = gold;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(-20, -8);
+        ctx.lineTo(20, -8);
+        ctx.stroke();
+        ctx.fillStyle = gold;
+        ctx.beginPath();
+        ctx.ellipse(0, -18, 6, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = skin;
+        ctx.beginPath();
+        ctx.ellipse(-22, 5, 5, 8, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = gold;
+        ctx.beginPath();
+        ctx.arc(-24, 8, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        ctx.restore();
+      }
+
+      async function playCutscene() {
+        return new Promise(async (resolve) => {
+          csResolve = resolve;
+          csActive = true;
+          csPhase = 0;
+          CS.classList.add("show");
+          CS.classList.remove("phase-gold");
+          CS_TERM.innerHTML = "";
+          CS_TERM.style.display = "flex";
+          CS_KHENU.classList.remove("on");
+          CS_KHENU.style.display = "none";
+          CS_PROG.style.width = "0%";
+          $("cs-continue").style.display = "none";
+
+          if (audioCtx) startCsMusic();
+
+          CS_PROG.style.width = "5%";
+          await typeLine("LAB STACK / COGNITIVE RIG v4.2.1", "sys", 18);
+          await csWait(320);
+          await typeLine("> tDCS interface · F3 + supraorbital · impedance PASS", "sys", 16);
+          CS_PROG.style.width = "18%";
+          await csWait(380);
+          await typeLine("> GLYPHMIND.exe · atlas OK · timing OK", "sys", 14);
+          CS_PROG.style.width = "32%";
+          await csWait(450);
+          await typeLine("WARNING: foreign process in stack / memory sector 0x13080", "warn", 16);
+          await csWait(280);
+          await typeLine("ERROR: FOREIGN ROUTINE · stdout hijacked", "err", 18);
+          CS_PROG.style.width = "42%";
+          await csWait(350);
+
+          if (!csActive) {
+            endCutscene();
+            return;
+          }
+          CS_GLITCH.classList.add("on");
+          if (audioCtx) beep(80, "sawtooth", 0.4, 0.2);
+          await csWait(720);
+          CS_GLITCH.classList.remove("on");
+
+          CS.classList.add("phase-gold");
+          CS_TERM.style.display = "none";
+          drawCsKhenu("idle", true);
+          CS_KHENU.style.display = "flex";
+          await csWait(200);
+          CS_KHENU.classList.add("on");
+          CS_PROG.style.width = "55%";
+          await csWait(900);
+
+          if (!csActive) {
+            endCutscene();
+            return;
+          }
+
+          drawCsKhenu("alert", true);
+          await typeDialogue("Oh. You're actually there. I'm <b>Khenu</b>; I host this corridor task.");
+          await waitForInput();
+          if (!csActive) {
+            endCutscene();
+            return;
+          }
+
+          CS_PROG.style.width = "70%";
+          drawCsKhenu("think", true);
+          await typeDialogue(
+            'Left forehead montage targets <span class="highlight">DLPFC</span>. Same thing your protocol sheet calls out.',
+          );
+          await waitForInput();
+          if (!csActive) {
+            endCutscene();
+            return;
+          }
+
+          CS_PROG.style.width = "85%";
+          drawCsKhenu("point", true);
+          await typeDialogue(
+            'Match if it repeats what you saw <span class="highlight">N paintings back</span> (shoot). Otherwise pass. Torches track how clean you are.',
+          );
+          await waitForInput();
+          if (!csActive) {
+            endCutscene();
+            return;
+          }
+
+          CS_PROG.style.width = "96%";
+          drawCsKhenu("bow", true);
+          await typeDialogue("Tutorial covers exports and warm-up. Ready when you are.");
+          await csWait(900);
+
+          CS_PROG.style.width = "100%";
+          await csWait(450);
+          endCutscene();
+        });
+      }
+
+      function skipCutscene() {
+        if (!csActive) return;
+        endCutscene();
+      }
+
+      function endCutscene() {
+        csActive = false;
+        csTimers.forEach((t) => clearTimeout(t));
+        csTimers = [];
+        stopCsMusic();
+        CS_TERM.innerHTML = "";
+        CS_KHENU.classList.remove("on");
+        CS.classList.remove("show", "phase-gold");
+        CS_PROG.style.width = "0%";
+        $("cs-continue").style.display = "none";
+        if (csResolve) {
+          csResolve();
+          csResolve = null;
+        }
+      }
+
+      document.addEventListener("keydown", (e) => {
+        if (e.code === "Escape" && csActive) {
+          e.preventDefault();
+          skipCutscene();
+        }
+      });
+
+      function startGameDirect() {
+        if (!PTEX) return;
+        if (!requireParticipantId()) return;
+        initAudio();
+        G.N = selectedN;
+        RES.pid =
+          $("tt-pid")
+            .value.replace(/[^\w\-]/g, "")
+            .slice(0, 32) || RES.pid;
+        RES.sid =
+          $("tt-sid")
+            .value.replace(/[^\w\-]/g, "")
+            .slice(0, 32) || RES.sid;
+        $("pid").value = RES.pid;
+        TITLE.classList.add("gone");
+        alive = true;
+        RES.begin();
+        G.start();
+      }
+
+      $("enter-btn").addEventListener("click", async () => {
+        if (!PTEX) return;
+        if (!requireParticipantId()) return;
+        if (RES.trials.length && !RES.exported) {
+          if (
+            !confirm(
+              "Starting fresh clears in-memory data. Use SAVE & NEXT PARTICIPANT after export. OK to discard?",
+            )
+          )
+            return;
+          discardSessionTrials();
+        }
+        initAudio();
+        if (
+          window.matchMedia("(pointer: coarse)").matches ||
+          /Mobi|Android/i.test(navigator.userAgent)
+        ) {
+          let el = document.documentElement;
+          if (el.requestFullscreen) el.requestFullscreen();
+          else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+          if (screen.orientation && screen.orientation.lock)
+            screen.orientation.lock("landscape").catch(() => {});
+        }
+        G.N = selectedN;
+        RES.pid =
+          $("tt-pid")
+            .value.replace(/[^\w\-]/g, "")
+            .slice(0, 32) || RES.pid;
+        RES.sid =
+          $("tt-sid")
+            .value.replace(/[^\w\-]/g, "")
+            .slice(0, 32) || RES.sid;
+        $("pid").value = RES.pid;
+        TITLE.classList.add("gone");
+        await playCutscene();
+        showTutorial(true);
+      });
+
+      document.fonts.ready.then(() => {
+        const tc = document.createElement("canvas").getContext("2d");
+        tc.font = '40px "Noto Sans Egyptian Hieroglyphs",serif';
+        tc.fillText(GLYPHS[0].ch, 0, 40);
+        PTEX = GLYPHS.map((_, i) => {
+          const S = 200,
+            cv = document.createElement("canvas");
+          cv.width = cv.height = S;
+          drawTile(cv.getContext("2d"), S, i, false);
+          const tex = new THREE.CanvasTexture(cv);
+          tex.generateMipmaps = true;
+          tex.minFilter = THREE.LinearMipmapLinearFilter;
+          return tex;
+        });
+        GTEX = GLYPHS.map((_, i) => {
+          const S = 200,
+            cv = document.createElement("canvas");
+          cv.width = cv.height = S;
+          drawTile(cv.getContext("2d"), S, i, true);
+          const tex = new THREE.CanvasTexture(cv);
+          tex.generateMipmaps = true;
+          tex.minFilter = THREE.LinearMipmapLinearFilter;
+          return tex;
+        });
+        PMAT = PTEX.map(
+          (t) =>
+            new THREE.MeshLambertMaterial({
+              map: t,
+              side: THREE.DoubleSide,
+              color: 0xffffff,
+              emissive: 0x503820,
+            }),
+        );
+        GMAT = GTEX.map(
+          (t) =>
+            new THREE.MeshLambertMaterial({
+              map: t,
+              side: THREE.DoubleSide,
+              color: 0xffffff,
+              emissive: 0x705030,
+            }),
+        );
+        $("enter-btn").disabled = false;
+        $("enter-btn").textContent = "START";
+        spawnTitleGlyphs();
+      });
+
+      requestAnimationFrame(loop);
+
+      window.addEventListener("beforeunload", (e) => {
+        if (RES.trials.length && !RES.exported) {
+          e.preventDefault();
+          e.returnValue = "";
+          return "";
+        }
+      });
+    </script>
+  </body>
+</html>
