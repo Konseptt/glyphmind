@@ -1,4 +1,9 @@
 <!doctype html>
+<!--
+  GLYPHMIND  -  single-page experiment (no bundler).
+  Layout: <head> fonts + CSS → <body> HUD markup + WebGL canvas → vendor scripts → large inline <script> with all logic.
+  Tip: search the script for "THREE.JS", "SEQUENCE GENERATOR", "RESULTS/RES", "GAME/G", "INPUT".
+-->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -1528,8 +1533,8 @@
       </div>
 
       <div class="mode-row">
-        <button class="mode-btn" id="mode-1">1-BACK</button>
-        <button class="mode-btn on" id="mode-3">3-BACK</button>
+        <button class="mode-btn on" id="mode-1">1-BACK</button>
+        <button class="mode-btn" id="mode-3">3-BACK</button>
         <button class="mode-btn" id="mode-custom">CUSTOM</button>
       </div>
       <div class="custom-n-wrap" id="custom-wrap">
@@ -1648,11 +1653,29 @@
     <script src="lib/three.min.js"></script>
     <script>
       "use strict";
-      // glyphmind, three r128, N warm-up paintings + 70 scored trials
 
+      /*
+       * GLYPHMIND  -  one HTML file: markup + styles + logic below.
+       *
+       * How this file is organized (search for these banners):
+       *   THREE.JS      -  WebGL renderer, lights, procedural wall textures, gun decal.
+       *   LEVEL         -  buildLevel(seq): corridor meshes + one panel per painting index.
+       *   STIMULI       -  GLYPHS[] and canvas tiles drawn onto panels.
+       *   SEQUENCE      -  genSeq70(N): random N-back stream, 30 targets / 40 non-targets among 70 scored slots.
+       *   RESULTS/RES   -  in-memory trial table + SheetJS export to .xlsx (Trials + Meta sheets).
+       *   GAME/G        -  phase machine, movement, revealPanel / respond, block end.
+       *   INPUT         -  keyboard, mouse pointer lock, touch UI.
+       *   TITLE/UI      -  PID, N-back mode, cutscene + tutorial hooks.
+       *
+       * Indices: seq[i] is the glyph index for painting i in walk order.
+       * Warm-up uses i = 0 .. N-1 (observe only). Scored trials use i = N .. N+69 (maps to trial 1..70 in export).
+       */
+
+      // Fixed block design (exported to Meta sheet for analysts).
       const TOTAL_TRIALS = 70;
-      const MATCH_COUNT = 30; // 30 match / 40 non-match
+      const MATCH_COUNT = 30; // among the 70 scored slots, exactly this many are true N-back matches
 
+      // DOM shortcuts  -  ids are declared in the HTML section above this script.
       const $ = (id) => document.getElementById(id);
       const C3D = $("c"),
         GCV = $("gc"),
@@ -1683,7 +1706,7 @@
       const CR = $("cr"),
         CRBODY = $("cr-body");
 
-      // renderer
+      // ---------- THREE.JS: renderer, scene, camera ----------
       const renderer = new THREE.WebGLRenderer({
         canvas: C3D,
         antialias: false,
@@ -2052,7 +2075,7 @@
         });
       }
 
-      // stimulus set (gardiner ids)
+      // ---------- STIMULI (Unicode hieroglyphs; index in seq[] selects GLYPHS[index]) ----------
       const GLYPH_FONT =
         '"Noto Sans Egyptian Hieroglyphs","Segoe UI Historic","Noto Sans Symbols 2",serif';
       const GLYPHS = [
@@ -2147,6 +2170,10 @@
         });
       }
 
+      /**
+       * Builds the corridor for one block: length scales with seq.length (always N + 70).
+       * Returns { panels, cBound }  -  each panel has idx aligned with seq[idx], world Z as player walks forward.
+       */
       function buildLevel(seq) {
         if (worldGrp) {
           disposeGrp(worldGrp);
@@ -2263,7 +2290,7 @@
         return { panels, cBound: { x0: -xM, x1: xM, z0: cZ1, z1: cZ0 } };
       }
 
-      // input
+      // ---------- INPUT / POINTER LOCK (desktop) + touch detection ----------
       const euler = new THREE.Euler(0, 0, 0, "YXZ");
       const KEYS = {};
       let alive = false,
@@ -2536,7 +2563,7 @@
         KEYS[e.code] = false;
       });
 
-      // movement
+      // Player locomotion while G.phase === "corridor" (WASD / arrows / sprint; clamped to corridor bounds).
       const EYE_HEIGHT = 1.78;
       function moveCam(dt, b) {
         const sy = Math.sin(euler.y),
@@ -2828,7 +2855,7 @@
         }
       }
 
-      // a11y toggles
+      // Accessibility UI flags (object name ACC  -  not spreadsheet accuracy column ACC).
       const ACC = {
         labels: false,
         hc: false,
@@ -2857,7 +2884,7 @@
         if (el) el.addEventListener("click", () => accToggle(k));
       });
 
-      // sequence builder: N observe-only panels + 70 scored trials (length N + 70)
+      // ---------- SEQUENCE GENERATOR (N-back stream for one block) ----------
       function randInt(n) {
         return Math.floor(Math.random() * n);
       }
@@ -2872,6 +2899,13 @@
         return arr;
       }
 
+      /**
+       * Random balanced stream:
+       *   Pick MATCH_COUNT scored indices (i >= N) at random → force seq[i] === seq[i-N].
+       *   Other scored indices → seq[i] uniform among glyphs ≠ seq[i-N].
+       * Warm-up slots [0..N-1] are unconstrained random (they seed comparisons once scoring starts).
+       * Repair passes fix edge cases where assignment drift disagrees with the match labels.
+       */
       function genSeq70(N) {
         const total = N + TOTAL_TRIALS;
         const seq = new Array(total);
@@ -2894,7 +2928,7 @@
           }
         }
 
-        // repair drift after fills
+        // Sweep until labels match actual equality vs lag-N (cheap safeguard).
         for (let pass = 0; pass < 5; pass++) {
           let dirty = false;
           for (let i = N; i < total; i++) {
@@ -2915,6 +2949,12 @@
         return seq;
       }
 
+      /*
+       * RES  -  export/session container (survives across blocks until SAVE & NEXT PARTICIPANT or discard).
+       * - trials[] rows: warmup vs scored; Resp 1=MATCH 2=NO MATCH; ACC compares Resp to CRESP.
+       * - condition / phase: researcher-facing strings from title toggles (phase ≠ G.phase game states!).
+       * - exportXLSX(): SheetJS workbook Trials + Meta.
+       */
       const RES = {
         pid: "",
         sid: "",
@@ -2935,6 +2975,7 @@
           this.block++;
         },
 
+        /** Push one scored row after participant responds (trial column = painting index minus warm-up length). */
         record(o) {
           const N = o.n;
           const idx = o.trialIdx;
@@ -2992,6 +3033,7 @@
           this.exported = false;
         },
 
+        /** Warm-up reveal  -  logs stimulus timing without ACC/RT/Resp fields. */
         recordWarmup(o) {
           const idx = o.trialIdx;
           const N = o.n;
@@ -3064,6 +3106,7 @@
           STATSBAR.style.display = "block";
         },
 
+        /** Build .xlsx from trials[]; filename embeds PID, condition, phase, N-back summary tag. */
         exportXLSX() {
           if (!this.trials.length) {
             alert("Nothing to export.");
@@ -3166,7 +3209,7 @@
             ["trialType_values", "warmup | scored"],
             [
               "RSI_ms_meaning",
-              "Milliseconds from rsiAnchor to this stimulus onset (walking + approach). Warm-up + scored trial 1: anchor = prior stimulus onset. Scored trials 2–70: anchor = prior keyed response. RSI is logged on every row.",
+              "Milliseconds from rsiAnchor to this stimulus onset (walking + approach). Warm-up + scored trial 1: anchor = prior stimulus onset. Scored trials 2-70: anchor = prior keyed response. RSI is logged on every row.",
             ],
             ["rsiAnchor_values", "none | prior_stimulus_onset | prior_response"],
           ];
@@ -3181,6 +3224,7 @@
         },
       };
 
+      /** Clears trials[] when starting over mid-session (paired with confirm() in callers). */
       function discardSessionTrials() {
         RES.trials = [];
         RES.exported = false;
@@ -3197,7 +3241,7 @@
         return true;
       }
 
-      // pid / session / condition fields
+      // ---------- Title screen → RES pid/session/condition/phase ----------
       $("tt-pid").addEventListener("input", function () {
         this.value = this.value.replace(/[^\w\-]/g, "").slice(0, 32);
         RES.pid = this.value;
@@ -3227,7 +3271,8 @@
         });
       });
 
-      let selectedN = 3;
+      // N-back level chosen on title row → copied into G.N at session start (matches whichever .mode-btn has class "on").
+      let selectedN = 1;
       let customN = 2;
 
       function selectMode(n, btn) {
@@ -3258,6 +3303,7 @@
         if ($("mode-custom").classList.contains("on")) selectedN = customN;
       });
 
+      // Pause menu (#pm): freezes timers skew compensation on resume so RT remains wall-clock fair.
       function pauseGame() {
         if (G.phase === "busy" || G.phase === "title" || G.phase === "results") return;
         G._pauseStart = performance.now();
@@ -3424,6 +3470,7 @@
         exitPointerLockIfAny();
       }
 
+      // Results overlay (#cr): pick N for the upcoming RUN NEXT BLOCK without re-entering PID (mirrors title modes).
       let crNextN = 1,
         crCustomN = 2;
       function crSelectMode(n, btn) {
@@ -3504,6 +3551,7 @@
         toTitle();
       });
 
+      /** Corridor HUD strip: current N, trial progress, recent glyphs / compare hints when awaiting response. */
       function hudUpdate() {
         NLEVEL.textContent = `N-BACK: ${G.N}`;
         BESTLV.textContent = `TRIAL ${G.respondedCount}/${TOTAL_TRIALS}`;
@@ -3564,6 +3612,13 @@
       const COMBO_EL = $("combo"),
         COMBO_VAL = $("combo-val");
 
+      /*
+       * G  -  live gameplay state (distinct from RES.phase / RES.condition which label the study).
+       *
+       * phase flow: title → busy (loading) → corridor ⇄ paused → results after 70 scored responses.
+       * In corridor: nextIdx points at the next painting to reveal; awaitingResponse blocks movement-only logic.
+       * lastEventTime stamps RSI anchors  -  reveal onset during warm-up chain; response time during scored chain.
+       */
       const G = {
         phase: "title",
         N: 1,
@@ -3577,6 +3632,7 @@
         blockComplete: false,
         lastEventTime: 0,
 
+        /** Corridor phase entry: fresh seq, rebuilt level, fade-in, then player control + pointer-lock hint. */
         start() {
           this.phase = "busy";
           this.nextIdx = 0;
@@ -3621,6 +3677,10 @@
           }, 660);
         },
 
+        /**
+         * Proximity opens the next glyph: warm-up paths log-only; scored paths enable MATCH / NO MATCH.
+         * p.rsi preset here = ms since lastEventTime (prior onset or prior response  -  see Meta RSI_ms_meaning).
+         */
         revealPanel(p) {
           if (p.revealed || this.blockComplete) return;
           p.revealed = true;
@@ -3666,6 +3726,7 @@
           }
         },
 
+        /** resp 1=MATCH 2=NO MATCH; compares to ground truth seq[i] vs seq[i-N] then logs RES.record. */
         respond(resp) {
           if (!this.awaitingResponse || this.currentTrialIdx < 0) return;
           const respTime = performance.now();
@@ -3729,6 +3790,7 @@
           hudUpdate();
         },
 
+        /** Accuracy HUD + unlock next block selector on results overlay (#cr). */
         endBlock() {
           this.blockComplete = true;
           this.phase = "results";
@@ -3760,7 +3822,7 @@
           add(bestCombo + "x", "BEST STREAK");
 
           CRBODY.innerHTML =
-            `Export downloads <b>Trials</b> (row-level: use <b>trialType</b> warmup vs scored; <b>trial</b> 1–70 on scored only) and <b>Meta</b> (session timers, design constants).`;
+            `Export downloads <b>Trials</b> (row-level: use <b>trialType</b> warmup vs scored; <b>trial</b> 1-70 on scored only) and <b>Meta</b> (session timers, design constants).`;
 
           spawnResultParticles();
           CR.classList.add("show");
@@ -3792,6 +3854,7 @@
       let tutPage = 0,
         tutFromTitle = false,
         tutFromPause = false;
+      /** Instruction overlay after title or from pause (slide deck + NPC canvas). */
       function showTutorial(fromTitle) {
         tutFromTitle = fromTitle;
         tutFromPause = false;
@@ -4064,8 +4127,9 @@
         ctx.restore();
       }
 
+      // RAF driver: physics + reveal probe + render (cheap loop  -  heavy assets built once in buildLevel).
       let lastT = 0;
-      const REVEAL_DIST = 4.8;
+      const REVEAL_DIST = 4.8; // world units along corridor Z  -  how close before we fire revealPanel
 
       function loop(t) {
         requestAnimationFrame(loop);
@@ -4839,6 +4903,7 @@
         ctx.restore();
       }
 
+      /** Fake terminal intro before first run; ENTER button awaits this Promise. */
       async function playCutscene() {
         return new Promise(async (resolve) => {
           csResolve = resolve;
@@ -4962,6 +5027,7 @@
         }
       });
 
+      /** Fast path: no cutscene / tutorial  -  same RES/bootstrap as ENTER but immediate G.start(). */
       function startGameDirect() {
         if (!PTEX) return;
         if (!requireParticipantId()) return;
@@ -4983,6 +5049,7 @@
       }
 
       $("enter-btn").addEventListener("click", async () => {
+        // Primary START: optional fullscreen on mobile → narrated cutscene → tutorial deck → same bootstrap as startGameDirect.
         if (!PTEX) return;
         if (!requireParticipantId()) return;
         if (RES.trials.length && !RES.exported) {
@@ -5020,6 +5087,7 @@
         showTutorial(true);
       });
 
+      // Startup gate: fonts must load before glyph textures (PTEX/GTEX); ENTER guarded until PTEX exists.
       document.fonts.ready.then(() => {
         const tc = document.createElement("canvas").getContext("2d");
         tc.font = '40px "Noto Sans Egyptian Hieroglyphs",serif';

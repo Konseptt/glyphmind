@@ -1,11 +1,11 @@
-# GLYPHMIND — Fully offline / zero setup
+# GLYPHMIND  -  Fully offline / zero setup
 
 **No internet at runtime**, **no npm**, **no Python**, **no build step.** Copy this entire folder (USB, lab machine, air‑gapped PC), keep relative paths, and open **`index.html`** in a modern browser.
 
 What ships locally:
 
-- **`lib/`** — Three.js + SheetJS (already bundled).
-- **`fonts/`** — Cinzel, Cinzel Decorative, Noto Egyptian Hieroglyphs (required so glyphs render; see **`fonts/FONT_NOTICE.txt`**).
+- **`lib/`**  -  Three.js + SheetJS (already bundled).
+- **`fonts/`**  -  Cinzel, Cinzel Decorative, Noto Egyptian Hieroglyphs (required so glyphs render; see **`fonts/FONT_NOTICE.txt`**).
 
 Do **not** move **`index.html`** without **`lib/`** and **`fonts/`** beside it (paths are relative).
 
@@ -30,7 +30,7 @@ Use a current **Chrome**, **Firefox**, **Safari**, or **Edge**. Internet Explore
 ## Running
 
 1. **Primary:** **Double‑click `index.html`** (opens as `file://…`). That is enough for typical lab machines.
-2. **Fallback:** If a browser blocks scripts or fonts from disk (rare), serve the folder once locally — still **no internet**:
+2. **Fallback:** If a browser blocks scripts or fonts from disk (rare), serve the folder once locally  -  still **no internet**:
 
    ```bash
    cd "/path/to/glyph-mind-offline"
@@ -73,9 +73,9 @@ Each block adds **N** **warm-up** rows (`trialType = warmup`) plus **70** **scor
 
 `PID`, `Session`, `Condition`, `Phase`, `sessionStartISO`, `exportedAt`, `block`, `N`, `trialType`, `painting`, `warmupIndex`, `trial`, `tc`, `CRESP`, `Resp`, `ACC`, `RT`, `RSI`, `rsiAnchor`, `TriggerCondition`, `TriggerResponse`, `Stimulus`, `StimulusName`, `StimulusUnicode`, `Target`, `TargetName`, `TargetUnicode`
 
-- **`trial`**: blank on warm-up; **1–70** on scored rows.  
+- **`trial`**: blank on warm-up; **1-70** on scored rows.  
 - **`tc` / `CRESP`**: target coding for analysis (see Meta **`RSI_ms_meaning`** for RSI interpretation).  
-- **`RSI`**: milliseconds from **`rsiAnchor`** to this stimulus onset on **every** row (warm-up = onset-to-onset; scored trial 1 = after last warm-up onset; scored trials 2–70 = after prior response). Use **`rsiAnchor`** when analyzing.
+- **`RSI`**: milliseconds from **`rsiAnchor`** to this stimulus onset on **every** row (warm-up = onset-to-onset; scored trial 1 = after last warm-up onset; scored trials 2-70 = after prior response). Use **`rsiAnchor`** when analyzing.
 
 ### Quick Excel checks
 

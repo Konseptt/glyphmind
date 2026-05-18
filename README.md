@@ -83,7 +83,7 @@ For painting index **i ≥ N**:
 **MATCH (target trial)** if those two glyphs are **identical**.  
 **NO MATCH** if they differ.
 
-Example (**3-back**): warm-up uses paintings **1–3**. First scored trial is painting **4**; compare its glyph to painting **1**. Painting **5** compares to painting **2**, and so on.
+Example (**3-back**): warm-up uses paintings **1-3**. First scored trial is painting **4**; compare its glyph to painting **1**. Painting **5** compares to painting **2**, and so on.
 
 ```mermaid
 flowchart LR
@@ -159,14 +159,14 @@ When a painting **reveals** its glyph (`revealTime`):
 
 ### 4.2 RSI and `rsiAnchor`
 
-**RSI** in the spreadsheet is the **milliseconds from an anchor event to the next stimulus onset** (walk + approach latency included—this is **not** a blank ISI).
+**RSI** in the spreadsheet is the **milliseconds from an anchor event to the next stimulus onset** (walk + approach latency included - this is **not** a blank ISI).
 
 | Row type | `rsiAnchor` | Meaning |
 |----------|-------------|---------|
 | Warm-up, first painting | `none` | No prior anchor (RSI may be `0`). |
 | Warm-up, later | `prior_stimulus_onset` | Time since previous warm-up onset. |
 | Scored **trial 1** | `prior_stimulus_onset` | Time since last warm-up onset. |
-| Scored **trials 2–70** | `prior_response` | Time since the **previous scored trial’s response**. |
+| Scored **trials 2-70** | `prior_response` | Time since the **previous scored trial’s response**. |
 
 Every exported row carries a numeric **`RSI`**; analysts should interpret it using **`rsiAnchor`**.
 
@@ -205,14 +205,14 @@ stateDiagram-v2
 - **Pause:** Pause menu can export, restart block, or return to title (with warnings if unexported data exists).
 - **Results:** Accuracy summary; options for **next block** (same participant IDs, incremented **`block`** in export) or **save & next participant**.
 
-Internal game phases include **`title`**, **`busy`**, **`corridor`**, **`paused`**, **`results`** (`RES.phase` stores experimental phase strings such as **`pre`**, **`during_stimulation`**, **`post`**—do not confuse the two).
+Internal game phases include **`title`**, **`busy`**, **`corridor`**, **`paused`**, **`results`** (`RES.phase` stores experimental phase strings such as **`pre`**, **`during_stimulation`**, **`post`** - do not confuse the two).
 
 ---
 
 ## 6. Research session workflow (multi-block & multi-participant)
 
 1. Set identifiers on the title screen; start the block.
-2. Optionally run multiple blocks (**RUN NEXT BLOCK**) while keeping the same PID/session/condition/phase labels—the **`block`** column increments.
+2. Optionally run multiple blocks (**RUN NEXT BLOCK**) while keeping the same PID/session/condition/phase labels - the **`block`** column increments.
 3. **Export** (`Export Data` or **`SAVE & NEXT PARTICIPANT`**) produces one **`.xlsx`** workbook (**Trials** + **Meta** sheets).
 
 Detailed column order, multi-block examples, and workstation notes live in **[README_OFFLINE.md](./README_OFFLINE.md)**.
@@ -257,7 +257,7 @@ Export columns **`Stimulus`** / **`Target`** use these Gardiner IDs; **`Stimulus
 
 ## 9. Data export (briefly)
 
-Each scored row includes **`trialType = scored`**, **`trial` 1–70**, **`N`**, **`ACC`**, **`RT`**, **`RSI`**, **`rsiAnchor`**, stimulus/target metadata, and **`TriggerCondition` / `TriggerResponse`** codes.
+Each scored row includes **`trialType = scored`**, **`trial` 1-70**, **`N`**, **`ACC`**, **`RT`**, **`RSI`**, **`rsiAnchor`**, stimulus/target metadata, and **`TriggerCondition` / `TriggerResponse`** codes.
 
 Warm-up rows use **`trialType = warmup`**, populate **`warmupIndex`**, leave **`trial`** blank, and omit ACC/RT/response fields.
 
@@ -292,4 +292,4 @@ python3 -m http.server 8080
 
 ## 12. License
 
-Repository license is **not set** by default—add a **`LICENSE`** file before redistribution if you need explicit terms. Font attribution is summarized under **`fonts/FONT_NOTICE.txt`**.
+Repository license is **not set** by default - add a **`LICENSE`** file before redistribution if you need explicit terms. Font attribution is summarized under **`fonts/FONT_NOTICE.txt`**.
