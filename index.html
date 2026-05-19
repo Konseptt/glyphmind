@@ -118,7 +118,7 @@
         inset: 0;
         pointer-events: none;
         user-select: none;
-        z-index: 5;
+        z-index: 15;
       }
       #xh {
         position: absolute;
@@ -171,113 +171,31 @@
         letter-spacing: 0.18em;
         text-shadow: 0 0 16px rgba(245, 142, 26, 0.9);
       }
-      #bestlv {
-        position: absolute;
-        top: 48px;
-        left: 20px;
-        font-size: clamp(9px, 1.2vw, 13px);
-        color: rgba(175, 122, 42, 0.68);
-        letter-spacing: 0.13em;
-      }
       #seqbox {
         position: absolute;
         top: 18px;
         right: 20px;
         text-align: right;
         max-width: 280px;
-        font-size: clamp(9px, 1.1vw, 13px);
-        color: rgba(200, 150, 54, 0.9);
-        letter-spacing: 0.07em;
-        line-height: 1.9;
+        font-size: clamp(10px, 1.25vw, 14px);
+        color: rgba(245, 194, 82, 0.96);
+        letter-spacing: 0.08em;
+        line-height: 1.85;
+        text-shadow:
+          0 0 12px rgba(0, 0, 0, 0.9),
+          0 1px 3px rgba(0, 0, 0, 0.85),
+          0 0 16px rgba(245, 142, 26, 0.45);
+        padding: 8px 12px;
+        background: rgba(8, 5, 1, 0.72);
+        border: 1px solid rgba(160, 108, 28, 0.35);
+      }
+      body.is-touch #seqbox {
+        top: 52px;
+        right: 12px;
       }
       #prompt {
-        position: absolute;
-        bottom: 80px;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: clamp(9px, 1.3vw, 14px);
-        letter-spacing: 0.18em;
-        color: rgba(200, 148, 52, 0.9);
-        text-shadow: 0 0 12px rgba(245, 142, 26, 0.55);
-        text-align: center;
-        pointer-events: none;
-        white-space: nowrap;
-      }
-      #statsbar {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        text-align: right;
-        font-size: clamp(7px, 0.85vw, 10px);
-        letter-spacing: 0.12em;
-        color: rgba(138, 98, 30, 0.6);
-        pointer-events: none;
-        z-index: 5;
-        line-height: 1.9;
         display: none;
       }
-
-      /* Response bar */
-      #rbar {
-        position: fixed;
-        bottom: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-        display: none;
-        gap: 18px;
-        z-index: 8;
-        pointer-events: all;
-        align-items: center;
-      }
-      #rbar.show {
-        display: flex;
-      }
-      .rbtn {
-        background: rgba(12, 8, 2, 0.94);
-        border: 2px solid rgba(160, 108, 28, 0.58);
-        color: rgba(242, 180, 60, 0.88);
-        font-family: "Cinzel", serif;
-        font-size: clamp(10px, 1.3vw, 14px);
-        letter-spacing: 0.14em;
-        padding: 10px 28px;
-        cursor: pointer;
-        transition:
-          background 0.12s,
-          border-color 0.14s,
-          transform 0.1s;
-        touch-action: manipulation;
-        min-width: 130px;
-        text-align: center;
-      }
-      .rbtn:hover,
-      .rbtn:focus {
-        background: rgba(34, 22, 6, 0.98);
-        border-color: rgba(242, 180, 60, 0.82);
-        transform: translateY(-2px);
-        outline: 2px solid rgba(242, 180, 60, 0.48);
-      }
-      .rbtn-match {
-        border-color: rgba(46, 200, 80, 0.55);
-        color: rgba(80, 220, 100, 0.9);
-      }
-      .rbtn-match:hover {
-        border-color: rgba(46, 220, 90, 0.8);
-      }
-      .rbtn-nomatch {
-        border-color: rgba(200, 80, 40, 0.55);
-        color: rgba(220, 120, 60, 0.9);
-      }
-      .rbtn-nomatch:hover {
-        border-color: rgba(220, 100, 50, 0.8);
-      }
-      .rbtn .rk {
-        display: block;
-        font-size: 0.7em;
-        color: rgba(200, 150, 50, 0.5);
-        margin-top: 3px;
-        letter-spacing: 0.1em;
-      }
-
       /* Trial feedback flash */
       #tfb {
         position: fixed;
@@ -1201,17 +1119,16 @@
         }
       }
 
-      /* combo HUD */
+      /* combo HUD — directly under #nlevel */
       #combo {
-        position: fixed;
-        top: 80px;
+        position: absolute;
+        top: 48px;
         left: 20px;
         font-family: "Cinzel Decorative", serif;
-        font-size: clamp(14px, 2.5vw, 28px);
+        font-size: clamp(12px, 1.8vw, 22px);
         color: rgba(245, 192, 82, 0);
         letter-spacing: 0.1em;
         pointer-events: none;
-        z-index: 5;
         transition:
           color 0.3s,
           text-shadow 0.3s,
@@ -1315,22 +1232,13 @@
     <canvas id="c" tabindex="0" aria-label="Game view"></canvas>
     <div id="gun"><canvas id="gc"></canvas></div>
     <div id="lockhint"><p>CLICK TO LOCK MOUSE</p></div>
-    <div id="statsbar"></div>
     <div id="hud">
       <div id="xh"></div>
       <div id="xring"></div>
       <div id="nlevel">N-BACK: 1</div>
-      <div id="bestlv"></div>
+      <div id="combo"><span id="combo-label">STREAK</span><span id="combo-val"></span></div>
       <div id="seqbox"></div>
       <div id="prompt"></div>
-    </div>
-
-    <!-- match / no-match bar -->
-    <div id="rbar">
-      <button class="rbtn rbtn-match" id="rb-match">MATCH<span class="rk">F / CLICK</span></button>
-      <button class="rbtn rbtn-nomatch" id="rb-nomatch">
-        NO MATCH<span class="rk">J / RIGHT-CLICK</span>
-      </button>
     </div>
 
     <!-- trial flash -->
@@ -1520,9 +1428,6 @@
       <div id="cs-progress" style="width: 0%"></div>
     </div>
 
-    <!-- streak -->
-    <div id="combo"><span id="combo-label">STREAK</span><span id="combo-val"></span></div>
-
     <!-- title -->
     <div id="tt">
       <div id="tt-glyphs"></div>
@@ -1683,13 +1588,10 @@
         GUN = $("gun");
       const LOCKHINT = $("lockhint"),
         HUD = $("hud"),
-        NLEVEL = $("nlevel"),
-        BESTLV = $("bestlv");
+        NLEVEL = $("nlevel");
       const SEQBOX = $("seqbox"),
-        PROMPT = $("prompt"),
-        STATSBAR = $("statsbar");
-      const RBAR = $("rbar"),
-        TFB = $("tfb");
+        PROMPT = $("prompt");
+      const TFB = $("tfb");
       const PMENU = $("pm"),
         FADE = $("fade"),
         RFL = $("rfl"),
@@ -2521,13 +2423,6 @@
         else pauseGame();
       });
 
-      $("rb-match").addEventListener("click", () => {
-        if (G.phase === "corridor" && G.awaitingResponse) G.respond(1);
-      });
-      $("rb-nomatch").addEventListener("click", () => {
-        if (G.phase === "corridor" && G.awaitingResponse) G.respond(2);
-      });
-
       document.addEventListener("keydown", (e) => {
         KEYS[e.code] = true;
         if (e.code === "Space" || e.code === "ShiftLeft" || e.code === "ShiftRight")
@@ -3096,16 +2991,6 @@
           return this._scored(b).filter((t) => t.tc === 2 && t.Resp === 2).length;
         },
 
-        updateBar() {
-          const t = this.trials.filter((x) => x.block === this.block && x.trialType !== "warmup");
-          if (!t.length) {
-            STATSBAR.style.display = "none";
-            return;
-          }
-          STATSBAR.textContent = `T${t.length}/${TOTAL_TRIALS}  ACC ${this.accuracy(this.block)}%  RT ${this.meanRT(this.block) || "--"}ms`;
-          STATSBAR.style.display = "block";
-        },
-
         /** Build .xlsx from trials[]; filename embeds PID, condition, phase, N-back summary tag. */
         exportXLSX() {
           if (!this.trials.length) {
@@ -3321,7 +3206,6 @@
         G._prev = G.phase;
         G.phase = "paused";
         PMENU.classList.add("show");
-        RBAR.classList.remove("show");
         LOCKHINT.classList.remove("show");
         exitPointerLockIfAny();
       }
@@ -3339,7 +3223,6 @@
         resumeAllTimers();
         G.phase = G._prev || "corridor";
         PMENU.classList.remove("show");
-        if (G.awaitingResponse) RBAR.classList.add("show");
         if (!isTouch && !pointerLocked) LOCKHINT.classList.add("show");
       }
 
@@ -3447,7 +3330,6 @@
       function toTitle() {
         CR.classList.remove("show");
         PMENU.classList.remove("show");
-        RBAR.classList.remove("show");
         alive = false;
         G.phase = "title";
         clearBullets();
@@ -3473,7 +3355,6 @@
         spawnTitleGlyphs();
         LOCKHINT.classList.remove("show");
         PROMPT.textContent = "";
-        STATSBAR.style.display = "none";
         gunGroup.visible = false;
         TFB.className = "";
         exitPointerLockIfAny();
@@ -3563,29 +3444,25 @@
         toTitle();
       });
 
-      /** Corridor HUD strip: current N, trial progress, recent glyphs / compare hints when awaiting response. */
+      /** Corridor HUD strip: trial progress and compare hints when awaiting response. */
       function hudUpdate() {
         NLEVEL.textContent = `N-BACK: ${G.N}`;
-        BESTLV.textContent = `TRIAL ${G.respondedCount}/${TOTAL_TRIALS}`;
         if (!G.seq.length) {
           SEQBOX.innerHTML = "";
           return;
         }
         const seen = G.nextIdx;
         const totalPaintings = G.seq.length;
-        const tail = G.seq.slice(Math.max(0, seen - 5), seen);
-        const dots = tail.map((gi) => (ACC.labels ? GLYPHS[gi].id : "\u25CF")).join(" ");
-        let h = `<div style="font-size:.72em;color:rgba(128,92,24,.52);letter-spacing:.12em;margin-bottom:2px">PAINTING ${seen}/${totalPaintings}</div>`;
-        h += `<div style="font-size:.9em;color:rgba(200,150,54,.88)">${dots || "\u2014"}</div>`;
+        let h = `<div style="font-size:.85em;color:rgba(245,194,82,.92);letter-spacing:.12em;margin-bottom:3px">PAINTING ${seen}/${totalPaintings}</div>`;
         if (G.phase === "corridor" && G.awaitingResponse && G.currentTrialIdx >= G.N) {
-          h += `<div style="margin-top:5px;font-size:.72em;color:rgba(155,110,38,.62)">COMPARE TO <b style="color:rgba(245,180,60,.9)">${G.N}</b> BACK</div>`;
-          h += `<div style="margin-top:2px;font-size:.68em;color:rgba(155,110,38,.48)">${G.N}-BACK WAS: <b>${ACC.labels ? GLYPHS[G.seq[seen - 1 - G.N]].id : "?"}</b></div>`;
+          h += `<div style="margin-top:6px;font-size:.85em;color:rgba(230,175,70,.92)">COMPARE TO <b style="color:rgba(255,210,90,1)">${G.N}</b> BACK</div>`;
+          h += `<div style="margin-top:3px;font-size:.8em;color:rgba(220,165,60,.88)">${G.N}-BACK WAS: <b style="color:rgba(255,210,90,1)">${ACC.labels ? GLYPHS[G.seq[seen - 1 - G.N]].id : "?"}</b></div>`;
         }
         const curBlockTrials = RES.trials.filter(
           (t) => t.block === RES.block && t.trialType !== "warmup",
         ).length;
         if (curBlockTrials) {
-          h += `<div style="margin-top:5px;font-size:.68em;color:rgba(138,98,30,.72)">ACC ${RES.accuracy(RES.block)}% RT ${RES.meanRT(RES.block) || "--"}ms</div>`;
+          h += `<div style="margin-top:6px;font-size:.8em;color:rgba(245,194,82,.9)">ACC ${RES.accuracy(RES.block)}% · RT ${RES.meanRT(RES.block) || "--"}ms</div>`;
         }
         SEQBOX.innerHTML = h;
       }
@@ -3679,12 +3556,11 @@
             TJOY.style.display = "";
             TPAUSE.style.display = "";
           }
-          RBAR.classList.remove("show");
           hudUpdate();
           fdIn(580);
           setTimeout(() => {
             this.phase = "corridor";
-            PROMPT.textContent = "PROCEED IN ORDER";
+            PROMPT.textContent = "";
             if (!isTouch) LOCKHINT.classList.add("show");
           }, 660);
         },
@@ -3713,11 +3589,7 @@
           if (i < this.N) {
             this.awaitingResponse = false;
             this.currentTrialIdx = -1;
-            RBAR.classList.remove("show");
-            PROMPT.textContent =
-              i === 0
-                ? "OBSERVE / REMEMBER THIS GLYPH"
-                : `OBSERVE / WARM-UP ${i + 1}/${this.N} (NO RESPONSE)`;
+            PROMPT.textContent = "";
             p.responded = true;
             this.lastEventTime = p.revealTime;
             RES.recordWarmup({
@@ -3726,14 +3598,12 @@
               glyphIdx: this.seq[i],
               rsi: p.rsi || 0,
             });
-            RES.updateBar();
             hudUpdate();
           } else {
             this.awaitingResponse = true;
             this.currentTrialIdx = p.idx;
-            RBAR.classList.add("show");
             LOCKHINT.classList.remove("show");
-            PROMPT.textContent = `TRIAL ${this.respondedCount + 1}/${TOTAL_TRIALS} · F MATCH · J NO MATCH`;
+            PROMPT.textContent = "";
             hudUpdate();
           }
         },
@@ -3782,7 +3652,6 @@
             rt: rt,
             rsi: rsi,
           });
-          RES.updateBar();
 
           this.lastEventTime = respTime;
 
@@ -3790,14 +3659,13 @@
           this.awaitingResponse = false;
           this.currentTrialIdx = -1;
           this.respondedCount++;
-          RBAR.classList.remove("show");
           if (!isTouch && !pointerLocked) LOCKHINT.classList.add("show");
 
           if (this.respondedCount >= TOTAL_TRIALS) {
-            PROMPT.textContent = "BLOCK COMPLETE";
+            PROMPT.textContent = "";
             safeTimeout(() => this.endBlock(), 800);
           } else {
-            PROMPT.textContent = "NEXT PAINTING";
+            PROMPT.textContent = "";
           }
           hudUpdate();
         },
@@ -3807,7 +3675,6 @@
           this.blockComplete = true;
           this.phase = "results";
           clearBullets();
-          RBAR.classList.remove("show");
           gunGroup.visible = false;
           XRING.classList.remove("aim");
           exitPointerLockIfAny();
